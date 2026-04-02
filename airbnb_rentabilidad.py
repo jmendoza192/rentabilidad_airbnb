@@ -37,6 +37,7 @@ if check_password():
         .section-desc { font-size: 0.85rem; color: #8899a6; margin-bottom: 15px; }
         .compare-card { background-color: #161b22; padding: 20px; border-radius: 10px; border: 1px solid #30363d; height: 100%; }
         .payback-card { background-color: #064e3b; padding: 15px; border-radius: 10px; border-left: 5px solid #00ffcc; margin-top: 15px; text-align: center; font-size: 0.95rem; }
+        .highlight-card { background-color: #1e293b; padding: 20px; border-radius: 10px; border: 1px solid #3b82f6; text-align: center; margin-bottom: 20px; }
         </style>
         """, unsafe_allow_html=True)
 
@@ -94,46 +95,57 @@ if check_password():
                 <span style='color:#8899a6'>3. Fondos Mutuos:</span> 8.2% | <span style='color:#8899a6'>4. Alquiler Tradicional:</span> 4.5%<br>
                 <span style='color: #00ffcc'>5. Tu Inversión Airbnb: <b>{roi_anual_air:.2f}%</b></span></div>""", unsafe_allow_html=True)
 
-        # --- CAMBIOS SOLICITADOS EN PAYBACK ---
+        # --- SECCIÓN PAYBACK ACTUALIZADA ---
         st.markdown('<div class="section-title">📅 Payback: Recuperación del Capital Invertido</div>', unsafe_allow_html=True)
-        st.markdown('<p class="section-desc">Este gráfico muestra el tiempo exacto que toma "limpiar" la deuda de tu inversión inicial (S/. {:,.0f}) y empezar a generar riqueza neta.</p>'.format(inversion_total_real), unsafe_allow_html=True)
+        st.markdown('<p class="section-desc">Punto exacto donde recuperas tu inversión inicial y el flujo se convierte en ganancia acumulada pura.</p>', unsafe_allow_html=True)
         
         años_pb = 25
         meses_pb = np.arange(0, años_pb * 12 + 1)
         flujo_acum = [-inversion_total_real]
+        año_recuperacion = None
+        
         for m in meses_pb[1:]:
             u_mes = flujo_neto_air if m <= (plazo_años * 12) else (ingreso_bruto_air - mantenimiento_mes - impuesto_air)
             flujo_acum.append(flujo_acum[-1] + u_mes)
-        
+            if año_recuperacion is None and flujo_acum[-1] >= 0:
+                año_recuperacion = m / 12
+
+        # Nueva tarjeta numérica de Payback
+        if año_recuperacion:
+            st.markdown(f"""
+            <div class="highlight-card">
+                <span style="color: #8899a6; font-size: 0.9rem;">TIEMPO ESTIMADO DE RECUPERACIÓN</span><br>
+                <span style="color: #3b82f6; font-size: 2.2rem; font-weight: bold;">{año_recuperacion:.1f} Años</span><br>
+                <span style="color: #00ffcc; font-size: 0.9rem;">En este punto habrás recuperado los S/. {inversion_total_real:,.0f} invertidos.</span>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.error("⚠️ El flujo actual no permite recuperar la inversión en el periodo proyectado.")
+
         fig_pb = go.Figure()
         f_np = np.array(flujo_acum)
-        # Área Roja (Bajo cero)
         fig_pb.add_trace(go.Scatter(x=meses_pb/12, y=np.where(f_np <= 0, f_np, 0), fill='tozeroy', fillcolor='rgba(239, 68, 68, 0.2)', line=dict(color='rgba(0,0,0,0)'), name="Recuperación"))
-        # Área Verde (Sobre cero)
         fig_pb.add_trace(go.Scatter(x=meses_pb/12, y=np.where(f_np >= 0, f_np, 0), fill='tozeroy', fillcolor='rgba(16, 185, 129, 0.2)', line=dict(color='rgba(0,0,0,0)'), name="Utilidad Neta"))
-        # Línea de flujo
         fig_pb.add_trace(go.Scatter(x=meses_pb/12, y=flujo_acum, line=dict(color='#3b82f6', width=4), name="Saldo"))
         fig_pb.add_hline(y=0, line_dash="dash", line_color="white")
         fig_pb.update_layout(height=400, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white", xaxis_title="Años")
         st.plotly_chart(fig_pb, use_container_width=True)
-        st.markdown('<p class="info-text">💡 El punto donde la línea azul cruza la línea blanca es tu <b>Break-Even de Capital</b>. Todo el área verde representa ganancia acumulada pura después de haber recuperado tu dinero.</p>', unsafe_allow_html=True)
+        st.markdown('<p class="info-text">💡 La zona roja representa el capital aún no recuperado, mientras que la zona verde es la creación de riqueza neta sobre la inversión original.</p>', unsafe_allow_html=True)
 
-    with tab2: # CONGELADO CON NOTAS
+    with tab2: # CONGELADO
         st.markdown('<div class="section-title">📈 Plusvalía: El Valor del Tiempo</div>', unsafe_allow_html=True)
-        st.markdown('<p class="section-desc">Nota: La plusvalía es el aumento del valor comercial del inmueble por factores de mercado y zona.</p>', unsafe_allow_html=True)
+        st.markdown('<p class="section-desc">Nota: Aumento del valor comercial del inmueble por factores de mercado.</p>', unsafe_allow_html=True)
         plus_val = st.slider("Plusvalía Anual (%)", 0.0, 10.0, 4.0)
-        años_p = np.arange(0, 26)
-        v_mkt = [val_depa * (1 + plus_val/100)**a for a in años_p]; s_deuda = [prestamo * (1 - a/plazo_años) if a < plazo_años else 0 for a in años_p]; eq = [v - d for v, d in zip(v_mkt, s_deuda)]
+        años_p = np.arange(0, 26); v_mkt = [val_depa * (1 + plus_val/100)**a for a in años_p]; s_deuda = [prestamo * (1 - a/plazo_años) if a < plazo_años else 0 for a in años_p]; eq = [v - d for v, d in zip(v_mkt, s_deuda)]
         fig_p = go.Figure(); fig_p.add_trace(go.Bar(x=años_p, y=v_mkt, name="Valor Propiedad", marker_color='#1f2630')); fig_p.add_trace(go.Scatter(x=años_p, y=eq, name="Equity", fill='tozeroy', line=dict(color='#00ffcc', width=3)))
         fig_p.update_layout(height=400, barmode='overlay', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white", title="Patrimonio vs Deuda")
         st.plotly_chart(fig_p, use_container_width=True)
-        st.markdown('<p class="info-text">💡 El <b>Equity</b> es la porción real de la propiedad que te pertenece. Crece conforme pagas la deuda y el mercado revaloriza la zona.</p>', unsafe_allow_html=True)
+        st.markdown('<p class="info-text">💡 El <b>Equity</b> crece conforme pagas la deuda y el mercado revaloriza la zona.</p>', unsafe_allow_html=True)
 
-    with tab3: # CONGELADO CON NOTAS
+    with tab3: # CONGELADO
         st.markdown('<div class="section-title">🛡️ Resiliencia y Riesgo</div>', unsafe_allow_html=True)
-        st.markdown('<p class="section-desc">Evaluación de la capacidad del proyecto para mantenerse rentable en escenarios adversos.</p>', unsafe_allow_html=True)
         st.metric("Punto de Equilibrio", f"{np.ceil(breakeven_dias):.0f} días/mes")
-        st.markdown('<p class="info-text">Días mínimos de alquiler para cubrir cuota, mantenimiento e impuestos sin usar dinero externo.</p>', unsafe_allow_html=True)
+        st.markdown('<p class="info-text">Días mínimos para cubrir costos sin inyectar capital.</p>', unsafe_allow_html=True)
         st.write("---")
         fig_c = go.Figure([go.Bar(x=['Airbnb', 'Tradicional'], y=[flujo_neto_air*12, u_anual_trad], marker_color=['#3b82f6', '#10b981'], text=[f"S/. {flujo_neto_air*12:,.0f}", f"S/. {u_anual_trad:,.0f}"], textposition='inside')])
         fig_c.update_layout(height=350, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white", title="Utilidad Anual Neta")
