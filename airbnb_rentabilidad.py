@@ -68,7 +68,7 @@ if check_password():
     # --- 4. TABS ---
     tab1, tab2, tab3, tab4 = st.tabs(["📊 Flujos", "📈 Plusvalía", "🛡️ Sensibilidad", "🔄 Airbnb vs Tradicional"])
 
-    # --- PESTAÑAS 1, 2 Y 4 (CONGELADAS) ---
+    # Pestañas 1, 2 y 4 (Sin cambios para evitar errores)
     with tab1:
         st.markdown('<div class="section-title">💰 Desembolso Inicial</div>', unsafe_allow_html=True)
         st.metric("Inversión Total Real", f"S/. {inversion_total_real:,.0f}")
@@ -94,27 +94,21 @@ if check_password():
         años_p = np.arange(0, 26); v_mkt = [val_depa * (1 + plus_val/100)**a for a in años_p]; s_deuda = [prestamo * (1 - a/plazo_años) if a < plazo_años else 0 for a in años_p]; eq = [v - d for v, d in zip(v_mkt, s_deuda)]
         fig_p = go.Figure(); fig_p.add_trace(go.Bar(x=años_p, y=v_mkt, name="Valor Propiedad", marker_color='#1f2630')); fig_p.add_trace(go.Scatter(x=años_p, y=eq, name="Equity", fill='tozeroy', line=dict(color='#00ffcc', width=3)))
         fig_p.update_layout(height=450, barmode='overlay', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white"); st.plotly_chart(fig_p, use_container_width=True)
-        st.markdown('<div class="info-text">💡 <b>Interpretación del Patrimonio:</b> Al inicio, tu Equity (área verde) representa solo tu inversión inicial. Con el tiempo, esta zona crece por la amortización de la deuda y la plusvalía.</div>', unsafe_allow_html=True)
 
-    with tab3: # ACTUALIZADO: COLORES SEMÁFORO + TABLA FIJA
+    with tab3: # ACTUALIZADO: ALTURA DE TABLA 2 PARA MOSTRAR TODO EL CONTENIDO
         st.markdown('<div class="section-title">🛡️ Escenarios de Estrés</div>', unsafe_allow_html=True)
         st.metric("Punto de Equilibrio Crítico", f"{np.ceil(breakeven_dias):.0f} días/mes")
         st.markdown('<p class="info-text">Nota: Cantidad mínima de noches para cubrir el 100% de obligaciones financieras sin pérdidas.</p>', unsafe_allow_html=True)
         st.write("---")
         
-        # Gráfico 1: ROI vs Días
+        # Bloque 1: ROI vs Días
         st.markdown('<div class="section-title">📉 1. ROI vs Días de Ocupación</div>', unsafe_allow_html=True)
         st.markdown('<p class="info-text">Analiza cómo varía el retorno anual sobre la inversión según la demanda mensual del mercado.</p>', unsafe_allow_html=True)
         col_o1, col_o2 = st.columns([1, 2])
         d_range = list(range(5, 31)); roi_o = [((((tarifa * d * 0.85 * 0.95) - cuota - mantenimiento_mes) * 12 / inversion_total_real) * 100) for d in d_range]
         with col_o1:
-            df_o = pd.DataFrame({
-                "Días": [f"{d}d" for d in [10, 15, 20, 25, 30]], 
-                "ROI %": [roi_o[d_range.index(d)] for d in [10, 15, 20, 25, 30]]
-            })
-            # Aplicación de semáforo con background_gradient
-            st.dataframe(df_o.style.format({"ROI %": "{:.1f}%"}).background_gradient(cmap='RdYlGn', subset=["ROI %"]), 
-                         height=212, use_container_width=True, hide_index=True)
+            df_o = pd.DataFrame({"Días": [f"{d}d" for d in [10, 15, 20, 25, 30]], "ROI %": [roi_o[d_range.index(d)] for d in [10, 15, 20, 25, 30]]})
+            st.dataframe(df_o.style.format({"ROI %": "{:.1f}%"}).background_gradient(cmap='RdYlGn', subset=["ROI %"]), height=212, use_container_width=True, hide_index=True)
         with col_o2:
             fig_o = go.Figure(go.Scatter(x=d_range, y=roi_o, line=dict(color='#3b82f6', width=3)))
             fig_o.add_hline(y=0, line_dash="dot", line_color="red")
@@ -123,19 +117,15 @@ if check_password():
 
         st.write("---")
         
-        # Gráfico 2: ROI vs Tarifa
+        # Bloque 2: ROI vs Tarifa (Altura ajustada a 400 para mostrar todas las líneas)
         st.markdown('<div class="section-title">📈 2. ROI vs Tarifa Diaria</div>', unsafe_allow_html=True)
         st.markdown('<p class="info-text">Proyección de rentabilidad ante fluctuaciones de precios por temporada o competencia en la zona.</p>', unsafe_allow_html=True)
         col_t1, col_t2 = st.columns([1, 2])
         t_range = list(range(int(tarifa*0.5), int(tarifa*1.5), 10)); roi_t = [((((t * ocupacion_act * 0.85 * 0.95) - cuota - mantenimiento_mes) * 12 / inversion_total_real) * 100) for t in t_range]
         with col_t1:
-            df_t = pd.DataFrame({
-                "Tarifa": [f"S/ {t}" for t in t_range[::2]], 
-                "ROI %": roi_t[::2]
-            })
-            # Aplicación de semáforo con background_gradient
-            st.dataframe(df_t.style.format({"ROI %": "{:.1f}%"}).background_gradient(cmap='RdYlGn', subset=["ROI %"]), 
-                         height=212, use_container_width=True, hide_index=True)
+            df_t = pd.DataFrame({"Tarifa": [f"S/ {t}" for t in t_range[::2]], "ROI %": roi_t[::2]})
+            # Aumentamos a 400 para que se vean las ~10 filas sin scroll
+            st.dataframe(df_t.style.format({"ROI %": "{:.1f}%"}).background_gradient(cmap='RdYlGn', subset=["ROI %"]), height=400, use_container_width=True, hide_index=True)
         with col_t2:
             fig_t = go.Figure(go.Scatter(x=t_range, y=roi_t, line=dict(color='#00ffcc', width=3)))
             fig_t.add_hline(y=0, line_dash="dot", line_color="red")
