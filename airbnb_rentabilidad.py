@@ -71,7 +71,8 @@ if check_password():
     # --- 4. TABS ---
     tab1, tab2, tab3, tab4 = st.tabs(["📊 Flujos", "📈 Plusvalía", "🛡️ Sensibilidad", "🔄 Airbnb vs Tradicional"])
 
-    with tab1: # CONGELADO
+    # --- PESTAÑAS 1, 2 Y 4 (SIN CAMBIOS) ---
+    with tab1:
         st.markdown('<div class="section-title">💰 Desembolso Inicial</div>', unsafe_allow_html=True)
         st.metric("Inversión Total Real", f"S/. {inversion_total_real:,.0f}")
         st.markdown('<div class="section-title">📉 Flujo de Caja</div>', unsafe_allow_html=True)
@@ -85,7 +86,7 @@ if check_password():
         if año_rec: st.markdown(f"""<div class="highlight-card"><span style="color: #3b82f6; font-size: 2.2rem; font-weight: bold;">{año_rec:.1f} Años</span></div>""", unsafe_allow_html=True)
         fig_pb = go.Figure(); f_np = np.array(flujo_acum); fig_pb.add_trace(go.Scatter(x=meses_pb/12, y=np.where(f_np <= 0, f_np, 0), fill='tozeroy', fillcolor='rgba(239, 68, 68, 0.2)', line=dict(color='rgba(0,0,0,0)'))); fig_pb.add_trace(go.Scatter(x=meses_pb/12, y=np.where(f_np >= 0, f_np, 0), fill='tozeroy', fillcolor='rgba(16, 185, 129, 0.2)', line=dict(color='rgba(0,0,0,0)'))); fig_pb.add_trace(go.Scatter(x=meses_pb/12, y=flujo_acum, line=dict(color='#3b82f6', width=4))); fig_pb.add_hline(y=0, line_dash="dash", line_color="white"); fig_pb.update_layout(height=400, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white"); st.plotly_chart(fig_pb, use_container_width=True)
 
-    with tab2: # CONGELADO
+    with tab2:
         st.markdown('<div class="section-title">📈 Plusvalía: El Valor del Tiempo</div>', unsafe_allow_html=True)
         plus_val = st.slider("Plusvalía Anual (%)", 0.0, 10.0, 4.0)
         c5, c10, c15, c20 = st.columns(4)
@@ -98,47 +99,43 @@ if check_password():
         fig_p.update_layout(height=450, barmode='overlay', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white"); st.plotly_chart(fig_p, use_container_width=True)
         st.markdown('<div class="info-text">💡 <b>Interpretación del Patrimonio:</b> Al inicio, tu Equity (área verde) representa solo tu inversión inicial. Con el tiempo, esta zona crece por la amortización de la deuda y la plusvalía.</div>', unsafe_allow_html=True)
 
-    with tab3: # ACTUALIZADO CON CORRECCIONES SOLICITADAS
+    with tab3: # ACTUALIZADO: ALTURA DE GRÁFICOS Y TABLAS (V21)
         st.markdown('<div class="section-title">🛡️ Escenarios de Estrés</div>', unsafe_allow_html=True)
-        
-        # Corrección 1: Punto de equilibrio en tarjeta con número grande
         st.metric("Punto de Equilibrio Crítico", f"{np.ceil(breakeven_dias):.0f} días/mes")
         st.markdown('<p class="info-text">Nota: Cantidad mínima de noches para cubrir el 100% de obligaciones financieras sin pérdidas.</p>', unsafe_allow_html=True)
-
         st.write("---")
         
-        # Gráfico 1
+        # Gráfico 1: Altura aumentada a 400
         st.markdown('<div class="section-title">📉 1. ROI vs Días de Ocupación</div>', unsafe_allow_html=True)
         st.markdown('<p class="info-text">Analiza cómo varía el retorno anual sobre la inversión según la demanda mensual del mercado.</p>', unsafe_allow_html=True)
         col_o1, col_o2 = st.columns([1, 2])
         d_range = list(range(5, 31)); roi_o = [((((tarifa * d * 0.85 * 0.95) - cuota - mantenimiento_mes) * 12 / inversion_total_real) * 100) for d in d_range]
         with col_o1:
-            # Corrección 2: Eliminadas filas en blanco filtrando la lista de días
             df_o = pd.DataFrame({"Días": [f"{d}d" for d in [10, 15, 20, 25, 30]], "ROI %": [roi_o[d_range.index(d)] for d in [10, 15, 20, 25, 30]]})
-            st.dataframe(df_o.style.format({"ROI %": "{:.1f}%"}).background_gradient(cmap='RdYlGn'), height=225, hide_index=True)
+            st.dataframe(df_o.style.format({"ROI %": "{:.1f}%"}).background_gradient(cmap='RdYlGn'), height=400, hide_index=True)
         with col_o2:
             fig_o = go.Figure(go.Scatter(x=d_range, y=roi_o, line=dict(color='#3b82f6', width=3)))
             fig_o.add_hline(y=0, line_dash="dot", line_color="red")
-            fig_o.update_layout(height=225, margin=dict(t=10, b=10), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white", xaxis_title="Días/Mes", yaxis_title="ROI %")
+            fig_o.update_layout(height=400, margin=dict(t=10, b=10), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white", xaxis_title="Días/Mes", yaxis_title="ROI %")
             st.plotly_chart(fig_o, use_container_width=True)
 
         st.write("---")
         
-        # Gráfico 2
+        # Gráfico 2: Altura aumentada a 400
         st.markdown('<div class="section-title">📈 2. ROI vs Tarifa Diaria</div>', unsafe_allow_html=True)
         st.markdown('<p class="info-text">Proyección de rentabilidad ante fluctuaciones de precios por temporada o competencia en la zona.</p>', unsafe_allow_html=True)
         col_t1, col_t2 = st.columns([1, 2])
         t_range = list(range(int(tarifa*0.5), int(tarifa*1.5), 10)); roi_t = [((((t * ocupacion_act * 0.85 * 0.95) - cuota - mantenimiento_mes) * 12 / inversion_total_real) * 100) for t in t_range]
         with col_t1:
             df_t = pd.DataFrame({"Tarifa": [f"S/ {t}" for t in t_range[::2]], "ROI %": roi_t[::2]})
-            st.dataframe(df_t.style.format({"ROI %": "{:.1f}%"}).background_gradient(cmap='RdYlGn'), height=225, hide_index=True)
+            st.dataframe(df_t.style.format({"ROI %": "{:.1f}%"}).background_gradient(cmap='RdYlGn'), height=400, hide_index=True)
         with col_t2:
             fig_t = go.Figure(go.Scatter(x=t_range, y=roi_t, line=dict(color='#00ffcc', width=3)))
             fig_t.add_hline(y=0, line_dash="dot", line_color="red")
-            fig_t.update_layout(height=225, margin=dict(t=10, b=10), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white", xaxis_title="Tarifa S/.", yaxis_title="ROI %")
+            fig_t.update_layout(height=400, margin=dict(t=10, b=10), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white", xaxis_title="Tarifa S/.", yaxis_title="ROI %")
             st.plotly_chart(fig_t, use_container_width=True)
 
-    with tab4: # CONGELADO
+    with tab4:
         st.markdown('<div class="section-title">🔄 Airbnb vs Tradicional</div>', unsafe_allow_html=True)
         c_comp1, c_comp2 = st.columns(2)
         c_comp1.metric("Ventaja Airbnb (Anual)", f"S/. {(flujo_neto_air*12) - u_anual_trad:,.0f}")
