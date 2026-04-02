@@ -1,12 +1,11 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
 
 # --- 1. CONFIGURACIÓN Y SEGURIDAD ---
-st.set_page_config(page_title="Airbnb vs Tradicional | Jancarlo Mendoza", layout="wide")
+st.set_page_config(page_title="ROI Airbnb Pro | Jancarlo Mendoza", layout="wide")
 
 def check_password():
     if "authenticated" not in st.session_state:
@@ -20,149 +19,113 @@ def check_password():
                 if password == "Jancarlo2026":
                     st.session_state.authenticated = True
                     st.rerun()
-                else:
-                    st.error("Acceso denegado.")
+                else: st.error("Acceso denegado.")
         return False
     return True
 
 if check_password():
-    # Estilos CSS
+    # CSS para reducir tamaño de tarjetas y fuentes
     st.markdown("""
         <style>
         .main { background-color: #0e1117; }
-        .stMetric { background-color: #1f2630; padding: 15px; border-radius: 10px; border: 1px solid #30363d; }
-        .comparison-card { padding: 20px; border-radius: 15px; margin-bottom: 20px; border: 1px solid #3b82f6; }
-        .vs-text { font-size: 1.5rem; font-weight: bold; text-align: center; color: #ff4b4b; margin: 20px 0; }
+        [data-testid="stMetricValue"] { font-size: 1.4rem !important; }
+        [data-testid="stMetricLabel"] { font-size: 0.8rem !important; }
+        div[data-testid="stMetric"] { background-color: #1f2630; padding: 10px; border-radius: 8px; }
+        .mini-card { padding: 12px; border-radius: 8px; border: 1px solid #30363d; margin-bottom: 10px; font-size: 0.85rem; }
+        .stSlider { padding-top: 0rem; }
         </style>
         """, unsafe_allow_html=True)
 
-    # --- 2. SIDEBAR - INPUTS MEJORADOS ---
+    # --- 2. SIDEBAR COMPACTO ---
     with st.sidebar:
-        st.header("📊 Variables del Proyecto")
-        precio_depa = st.number_input("Precio Inmueble (S/.)", value=250000, step=10000)
-        tcea = st.number_input("TCEA (%)", value=9.5, step=0.1)
-        plazo = st.selectbox("Plazo (Años)", [10, 15, 20, 25], index=2)
+        st.subheader("🏦 Financiamiento")
+        val_depa = st.number_input("Precio Depa", value=250000)
+        tcea = st.number_input("TCEA %", value=9.5)
+        plazo = st.selectbox("Años", [10, 15, 20, 25], index=2)
         
-        st.write("---")
-        st.subheader("🏠 Configuración Airbnb")
-        tarifa_dia = st.number_input("Tarifa Diaria (S/.)", value=180)
-        dias_simulados = st.slider("Días ocupados al mes", 1, 30, 20)
+        st.subheader("🏠 Operación Airbnb")
+        tarifa = st.number_input("Tarifa/Día (S/.)", value=180)
+        ocupacion_act = st.slider("Ocupación mensual (Días)", 1, 30, 20)
         
-        st.subheader("🏢 Configuración Tradicional")
-        renta_mensual = st.number_input("Alquiler Mensual Fijo (S/.)", value=1800)
-        
-        st.caption("Estrategia Integral - Jancarlo Mendoza")
+        st.subheader("🏢 Tradicional")
+        renta_trad = st.number_input("Renta mensual fija", value=1800)
 
-    # --- 3. CÁLCULOS FINANCIEROS BASE ---
-    inicial = precio_depa * 0.20
-    prestamo = precio_depa - inicial
+    # --- 3. LÓGICA FINANCIERA ---
+    inicial = val_depa * 0.20
+    prestamo = val_depa - inicial
     tem = (1 + tcea/100)**(1/12) - 1
-    n_cuotas = plazo * 12
-    cuota_mes = prestamo * (tem * (1 + tem)**n_cuotas) / ((1 + tem)**n_cuotas - 1)
-    gastos_fijos_anuales = precio_depa * 0.03 # Predial, arbitrios, mantenimiento
-
-    # Cálculos Airbnb
-    ingreso_anual_air = tarifa_dia * dias_simulados * 12
-    gastos_operativos_air = (ingreso_anual_air * 0.15) + gastos_fijos_anuales
-    utilidad_air = ingreso_anual_air - (cuota_mes * 12) - (ingreso_anual_air * 0.15) - gastos_fijos_anuales
-    roi_air = (utilidad_air / inicial) * 100
-
-    # Cálculos Tradicional
-    ingreso_anual_trad = renta_mensual * 12
-    # El alquiler tradicional suele tener menos gastos (solo predial/arbitrios), asumimos 1.5% del valor del inmueble
-    gastos_trad = precio_depa * 0.015 
-    utilidad_trad = ingreso_anual_trad - (cuota_mes * 12) - gastos_trad
-    roi_trad = (utilidad_trad / inicial) * 100
-
-    # --- 4. INTERFAZ PRINCIPAL ---
-    st.title("⚖️ Airbnb vs. Alquiler Tradicional")
+    cuota = prestamo * (tem * (1 + tem)**(plazo*12)) / ((1 + tem)**(plazo*12) - 1)
     
-    # KPIs Rápidos
-    k1, k2, k3 = st.columns(3)
-    k1.metric("Inversión Inicial (20%)", f"S/. {inicial:,.0f}")
-    k2.metric("Cuota Hipotecaria", f"S/. {cuota_mes:,.2f}")
-    k3.metric("Monto del Préstamo", f"S/. {prestamo:,.0f}")
+    # Gastos fijos (Mantenimiento, arbitrios, predial) - 3% anual
+    gastos_fijos_mes = (val_depa * 0.03) / 12
+    
+    # Ingresos Netos Airbnb (Considerando 15% comisión plataforma)
+    ingreso_neto_mes_air = (tarifa * ocupacion_act * 0.85) - cuota - gastos_fijos_mes
+    roi_anual_air = (ingreso_neto_mes_air * 12 / inicial) * 100
+
+    # --- 4. DASHBOARD ---
+    st.title("🎯 Auditoría de Inversión Airbnb")
+    
+    # Fila de métricas reducidas
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Cuota Mensual", f"S/. {cuota:,.2f}")
+    c2.metric("Punto Equilibrio", f"{np.ceil((cuota + gastos_fijos_mes)/(tarifa*0.85)):.0f} días")
+    c3.metric("Utilidad Neto/Mes", f"S/. {ingreso_neto_mes_air:,.2f}")
+    c4.metric("ROI s/ Inicial", f"{roi_anual_air:.2f}%")
 
     st.write("---")
 
-    # SECCIÓN: ANALISIS ROI AJUSTADO
-    st.subheader(f"📈 Análisis ROI Personalizado ({dias_simulados} días/mes)")
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        st.metric("Utilidad Neta Airbnb", f"S/. {utilidad_air:,.2f}", delta=f"{roi_air:.2f}% ROI")
-    with c2:
-        st.metric("Utilidad Neta Tradicional", f"S/. {utilidad_trad:,.2f}", delta=f"{roi_trad:.2f}% ROI", delta_color="normal")
-    with c3:
-        breakeven_dias = (cuota_mes + (gastos_fijos_anuales/12)) / (tarifa_dia * 0.85)
-        st.metric("Punto de Equilibrio", f"{np.ceil(breakeven_dias):.0f} noches", "Mínimo/mes")
+    # SECCIÓN: FLUJO DE CAJA ACUMULADO (PUNTO DE INFLEXIÓN)
+    st.subheader("📅 Payback: Recuperación de la Inversión Inicial")
+    
+    # Proyección a 5 años (60 meses)
+    meses_proy = 60
+    eje_x = list(range(0, meses_proy + 1))
+    # El flujo empieza en NEGATIVO (la inicial)
+    flujo_acum = [-inicial]
+    for m in range(1, meses_proy + 1):
+        flujo_acum.append(flujo_acum[-1] + ingreso_neto_mes_air)
 
-    # SECCIÓN: COMPARATIVA VISUAL
+    fig_payback = go.Figure()
+    fig_payback.add_trace(go.Scatter(x=eje_x, y=flujo_acum, fill='tozeroy', name="Flujo de Caja Acumulado"))
+    fig_payback.add_hline(y=0, line_dash="dash", line_color="red", annotation_text="Punto de Retorno")
+    
+    fig_payback.update_layout(height=350, margin=dict(l=20, r=20, t=30, b=20), paper_bgcolor='rgba(0,0,0,0)', 
+                              plot_bgcolor='rgba(0,0,0,0)', font_color="white",
+                              xaxis_title="Meses de Operación", yaxis_title="Soles (S/.)")
+    st.plotly_chart(fig_payback, use_container_width=True)
+
+    # SECCIÓN: ANALISIS DE SENSIBILIDAD (ROI vs OCUPACIÓN)
     st.write("---")
-    st.subheader("🔄 Duelo de Modelos de Negocio")
+    st.subheader("📊 Sensibilidad de Rentabilidad")
     
-    col_air, col_vs, col_trad = st.columns([2, 0.5, 2])
+    dias_rango = [10, 12, 15, 18, 20, 22, 25, 28]
+    data_sens = []
+    for d in dias_rango:
+        u_mes = (tarifa * d * 0.85) - cuota - gastos_fijos_mes
+        roi = (u_mes * 12 / inicial) * 100
+        data_sens.append({"Días": d, "Utilidad/Mes": u_mes, "ROI%": roi})
     
-    with col_air:
-        st.markdown(f"""
-        <div style="background-color:#1e3a8a; padding:20px; border-radius:10px; border:1px solid #3b82f6;">
-            <h4>MODELO AIRBNB</h4>
-            <p>Ingreso Bruto: S/. {ingreso_anual_air:,.0f}</p>
-            <p>Gastos Operativos (15%): -S/. {ingreso_anual_air*0.15:,.0f}</p>
-            <p style="font-size:1.2rem; font-weight:bold;">ROI: {roi_air:.2f}%</p>
-        </div>
-        """, unsafe_allow_html=True)
+    df_sens = pd.DataFrame(data_sens)
+    
+    col_t, col_g = st.columns([1, 1.5])
+    with col_t:
+        st.dataframe(df_sens.style.format({"Utilidad/Mes": "S/. {:,.0f}", "ROI%": "{:.1f}%"}), hide_index=True)
+    with col_g:
+        fig_sens = go.Figure(go.Bar(x=df_sens["Días"], y=df_sens["ROI%"], marker_color='#3b82f6', text=df_sens["ROI%"].round(1)))
+        fig_sens.update_layout(height=250, margin=dict(l=10, r=10, t=10, b=10), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
+        st.plotly_chart(fig_sens, use_container_width=True)
 
-    with col_vs:
-        st.markdown('<div class="vs-text">VS</div>', unsafe_allow_html=True)
-
-    with col_trad:
-        st.markdown(f"""
-        <div style="background-color:#064e3b; padding:20px; border-radius:10px; border:1px solid #10b981;">
-            <h4>ALQUILER TRADICIONAL</h4>
-            <p>Ingreso Bruto: S/. {ingreso_anual_trad:,.0f}</p>
-            <p>Gastos (Vacancia/Mant.): -S/. {gastos_trad:,.0f}</p>
-            <p style="font-size:1.2rem; font-weight:bold;">ROI: {roi_trad:.2f}%</p>
-        </div>
-        """, unsafe_allow_html=True)
-
-    # SECCIÓN: FLUJO DE CAJA ACUMULADO Y GRÁFICO
+    # SECCIÓN: COMPARATIVA RÁPIDA VS TRADICIONAL
     st.write("---")
-    st.subheader("📅 Proyección de Flujo de Caja (Año 1)")
+    u_mes_trad = renta_trad - cuota - (val_depa * 0.015 / 12)
+    roi_trad = (u_mes_trad * 12 / inicial) * 100
     
-    meses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
-    flujo_mensual = (ingreso_anual_air / 12) - cuota_mes - (ingreso_anual_air * 0.15 / 12) - (gastos_fijos_anuales / 12)
-    
-    acumulado = []
-    current = 0
-    for m in meses:
-        current += flujo_mensual
-        acumulado.append(current)
-        
-    fig_flow = go.Figure()
-    fig_flow.add_trace(go.Scatter(x=meses, y=acumulado, fill='tozeroy', 
-                                 line=dict(color='#3b82f6', width=4),
-                                 name="Flujo Acumulado"))
-    
-    # Línea de Cero
-    fig_flow.add_shape(type="line", x0=0, y0=0, x1=11, y1=0, 
-                       line=dict(color="red", width=2, dash="dash"))
-    
-    fig_flow.update_layout(title="Acumulado de Utilidad Neta (Airbnb)",
-                          paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-                          font_color="white", yaxis_title="Soles (S/.)")
-    
-    st.plotly_chart(fig_flow, use_container_width=True)
-    
-    if acumulado[-1] > 0:
-        st.success(f"✅ **Proyecto Rentable:** Al finalizar el año 1 habrás generado **S/. {acumulado[-1]:,.2f}** de flujo de caja positivo.")
-    else:
-        st.error(f"⚠️ **Atención:** En este escenario, el proyecto cierra el año con un déficit de **S/. {acumulado[-1]:,.2f}**. Revisa la tarifa o aumenta los días de ocupación.")
+    st.subheader("⚖️ Airbnb vs. Tradicional")
+    ca, ct = st.columns(2)
+    with ca:
+        st.markdown(f"""<div class="mini-card" style="border-color: #3b82f6;"><b>Airbnb ({ocupacion_act} días):</b><br>Utilidad Neto: S/. {ingreso_neto_mes_air:,.2f}<br>ROI: {roi_anual_air:.1f}%</div>""", unsafe_allow_html=True)
+    with ct:
+        st.markdown(f"""<div class="mini-card" style="border-color: #10b981;"><b>Tradicional:</b><br>Utilidad Neto: S/. {u_mes_trad:,.2f}<br>ROI: {roi_trad:.1f}%</div>""", unsafe_allow_html=True)
 
-    # Variables de Interés adicionales
-    with st.expander("🔍 Otras Variables de Interés"):
-        st.write(f"**Plusvalía Estimada (5% anual):** S/. {precio_depa * 0.05:,.2f}")
-        st.write(f"**Pago a Capital en Año 1:** S/. {(cuota_mes * 12) - (prestamo * (tcea/100)):,.2f} (Ahorro indirecto)")
-        st.write(f"**Carga de Deuda Mensual:** {((cuota_mes / 6000) * 100):.1f}% (Basado en ingreso referencial de S/ 6k)")
-
-    if st.button("Finalizar Auditoría"):
-        st.balloons()
+    if st.button("Finalizar"): st.balloons()
