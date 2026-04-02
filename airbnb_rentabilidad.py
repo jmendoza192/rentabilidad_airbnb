@@ -31,6 +31,7 @@ if check_password():
         div[data-testid="stMetric"] { background-color: #1f2630; padding: 12px; border-radius: 8px; border: 1px solid #30363d; }
         .info-text { font-size: 0.8rem; color: #a1a1a1; margin-top: 5px; line-height: 1.3; }
         .mini-card { padding: 15px; border-radius: 8px; border: 1px solid #30363d; background-color: #161b22; }
+        .payback-card { background-color: #064e3b; padding: 15px; border-radius: 10px; border-left: 5px solid #00ffcc; margin-top: 10px; text-align: center; }
         .section-title { margin-top: 20px; margin-bottom: 10px; color: #3b82f6; font-size: 1.2rem; font-weight: bold; }
         </style>
         """, unsafe_allow_html=True)
@@ -70,20 +71,16 @@ if check_password():
     m1, m2, m3, m4 = st.columns(4)
     with m1:
         st.metric("Cuota Mensual", f"S/. {cuota:,.2f}")
-        st.markdown('<p class="info-text">Obligación fija con el banco.</p>', unsafe_allow_html=True)
     with m2:
         st.metric("Punto Equilibrio", f"{np.ceil(breakeven_dias):.0f} días")
-        st.markdown('<p class="info-text">Mínimo para flujo de caja cero.</p>', unsafe_allow_html=True)
     with m3:
         st.metric("Flujo Neto/Mes", f"S/. {ingreso_neto_mes_air:,.2f}")
-        st.markdown('<p class="info-text">Efectivo libre tras gastos e hipoteca.</p>', unsafe_allow_html=True)
     with m4:
         st.metric("ROI s/ Inicial", f"{roi_anual_air:.2f}%")
-        st.markdown('<p class="info-text">Rentabilidad Cash-on-Cash anual.</p>', unsafe_allow_html=True)
 
     st.write("---")
 
-    # SECCIÓN: PAYBACK (CON SOMBREADO CONDICIONAL)
+    # SECCIÓN: PAYBACK
     st.markdown('<div class="section-title">📅 Payback: Recuperación del Capital en el Tiempo</div>', unsafe_allow_html=True)
     
     años_proy = 15
@@ -93,48 +90,58 @@ if check_password():
         flujo_acum.append(flujo_acum[-1] + ingreso_neto_mes_air)
 
     fig_payback = go.Figure()
-    # Separar datos positivos y negativos para el sombreado
     flujo_np = np.array(flujo_acum)
     
     fig_payback.add_trace(go.Scatter(x=eje_x_años, y=np.where(flujo_np <= 0, flujo_np, 0),
                                      fill='tozeroy', fillcolor='rgba(255, 0, 0, 0.2)',
-                                     line=dict(color='rgba(255, 0, 0, 0)'), name="Zona de Recuperación"))
+                                     line=dict(color='rgba(255, 0, 0, 0)'), showlegend=False))
     
     fig_payback.add_trace(go.Scatter(x=eje_x_años, y=np.where(flujo_np >= 0, flujo_np, 0),
                                      fill='tozeroy', fillcolor='rgba(0, 255, 0, 0.2)',
-                                     line=dict(color='rgba(0, 255, 0, 0)'), name="Zona de Ganancia"))
+                                     line=dict(color='rgba(0, 255, 0, 0)'), showlegend=False))
     
-    fig_payback.add_trace(go.Scatter(x=eje_x_años, y=flujo_acum, line=dict(color='#3b82f6', width=3), name="Flujo Neto"))
+    fig_payback.add_trace(go.Scatter(x=eje_x_años, y=flujo_acum, line=dict(color='#3b82f6', width=3), name="Flujo Acumulado"))
     fig_payback.add_hline(y=0, line_dash="dash", line_color="white")
 
-    fig_payback.update_layout(height=400, margin=dict(l=20, r=20, t=10, b=20), paper_bgcolor='rgba(0,0,0,0)', 
-                              plot_bgcolor='rgba(0,0,0,0)', font_color="white", xaxis_title="Tiempo (Años)", yaxis_title="Soles (S/.)")
+    fig_payback.update_layout(height=350, margin=dict(l=20, r=20, t=10, b=10), paper_bgcolor='rgba(0,0,0,0)', 
+                              plot_bgcolor='rgba(0,0,0,0)', font_color="white", xaxis_title="Años", yaxis_title="Soles (S/.)")
     st.plotly_chart(fig_payback, use_container_width=True)
-    st.info(f"💡 **Punto de Retorno:** La transición del rojo al verde marca el momento exacto en que la inversión se vuelve 'dinero gratis'.")
+    
+    # Tarjeta de Punto Cero
+    if ingreso_neto_mes_air > 0:
+        meses_retorno = inicial / ingreso_neto_mes_air
+        años_retorno = meses_retorno / 12
+        st.markdown(f"""<div class="payback-card">🚀 <b>PUNTO DE EQUILIBRIO FINANCIERO:</b> Recuperas tu inversión inicial (S/. {inicial:,.0f}) en aproximadamente <b>{años_retorno:.1f} años</b> operando a este nivel.</div>""", unsafe_allow_html=True)
+    else:
+        st.error("⚠️ El flujo es negativo. No se alcanzará el punto de recuperación con los parámetros actuales.")
 
-    # SECCIÓN: SENSIBILIDAD CON CUADRO LATERAL
+    # SECCIÓN: SENSIBILIDAD (REGISTROS CADA 5 DÍAS)
     st.write("---")
     st.markdown('<div class="section-title">📊 Análisis de Sensibilidad: ROI vs. Ocupación</div>', unsafe_allow_html=True)
     
     col_table, col_line = st.columns([1, 2])
     
-    dias_rango = list(range(5, 31))
-    roi_rango = [(((tarifa * d * 0.85) - cuota - gastos_fijos_mes) * 12 / inicial) * 100 for d in dias_rango]
+    # Rango cada 5 días para la tabla
+    dias_tabla = [5, 10, 15, 20, 25, 30]
+    roi_tabla = [(((tarifa * d * 0.85) - cuota - gastos_fijos_mes) * 12 / inicial) * 100 for d in dias_tabla]
+    
+    # Rango completo para el gráfico (para que sea una curva suave)
+    dias_graf = list(range(5, 31))
+    roi_graf = [(((tarifa * d * 0.85) - cuota - gastos_fijos_mes) * 12 / inicial) * 100 for d in dias_graf]
     
     with col_table:
-        df_sens = pd.DataFrame({"Días": dias_rango, "ROI %": roi_rango})
-        st.dataframe(df_sens.style.format({"ROI %": "{:.1f}%"}).background_gradient(cmap='RdYlGn'), height=350, hide_index=True)
+        df_sens = pd.DataFrame({"Ocupación": [f"{d} días" for d in dias_tabla], "ROI %": roi_tabla})
+        st.dataframe(df_sens.style.format({"ROI %": "{:.1f}%"}).background_gradient(cmap='RdYlGn', axis=0), height=250, hide_index=True, use_container_width=True)
     
     with col_line:
         fig_sens = go.Figure()
-        fig_sens.add_trace(go.Scatter(x=dias_rango, y=roi_rango, mode='lines+markers', line_color='#00ffcc', name="ROI %"))
+        fig_sens.add_trace(go.Scatter(x=dias_graf, y=roi_graf, mode='lines', line=dict(color='#00ffcc', width=4)))
         fig_sens.add_hline(y=0, line_dash="dot", line_color="red")
-        fig_sens.update_layout(height=350, margin=dict(l=10, r=10, t=10, b=10), paper_bgcolor='rgba(0,0,0,0)', 
+        fig_sens.update_layout(height=250, margin=dict(l=10, r=10, t=10, b=10), paper_bgcolor='rgba(0,0,0,0)', 
                                plot_bgcolor='rgba(0,0,0,0)', font_color="white", xaxis_title="Días/Mes", yaxis_title="ROI %")
         st.plotly_chart(fig_sens, use_container_width=True)
-    st.warning(f"⚠️ **ROI 0%:** Se alcanza a los **{np.ceil(breakeven_dias):.0f} días**. Por debajo de este punto, el inversor debe inyectar capital mensual.")
 
-    # SECCIÓN: COMPARATIVA FINAL (ESTILO MEJORADO)
+    # SECCIÓN: COMPARATIVA FINAL (VALORES CENTRADOS VERTICALMENTE)
     st.write("---")
     st.markdown('<div class="section-title">⚖️ Duelo de Estrategias: Airbnb vs. Tradicional</div>', unsafe_allow_html=True)
     
@@ -143,17 +150,16 @@ if check_password():
         st.markdown(f"""
         <div class="mini-card">
             <b>🏠 Airbnb ({ocupacion_act} días)</b><br>
-            • Ingreso Bruto: S/. {tarifa * ocupacion_act * 12:,.0f}<br>
+            • Utilidad Anual: S/. {ingreso_neto_mes_air * 12:,.2f}<br>
             • ROI: <b>{roi_anual_air:.1f}%</b><br><br>
             <b>🏢 Tradicional</b><br>
-            • Ingreso Bruto: S/. {renta_trad * 12:,.0f}<br>
-            • ROI: <b>{roi_trad:.1f}%</b><br><br>
-            <i>Diferencia de flujo anual: S/. {abs((ingreso_neto_mes_air - u_mes_trad)*12):,.2f}</i>
+            • Utilidad Anual: S/. {u_mes_trad * 12:,.2f}<br>
+            • ROI: <b>{roi_trad:.1f}%</b>
         </div>
         """, unsafe_allow_html=True)
 
     with col_graf:
-        labels = ['Utilidad Anual Airbnb', 'Utilidad Anual Tradicional']
+        labels = ['Airbnb', 'Tradicional']
         valores = [ingreso_neto_mes_air * 12, u_mes_trad * 12]
         
         fig_comp = go.Figure([go.Bar(
@@ -161,11 +167,12 @@ if check_password():
             marker_color=['#3b82f6', '#10b981'],
             text=[f"S/. {v:,.0f}" for v in valores],
             textposition='inside',
-            textfont=dict(size=18, family="Arial Black", color="white")
+            insidetextanchor='middle', # CENTRADO VERTICAL
+            textfont=dict(size=22, family="Arial Black", color="white")
         )])
         
         fig_comp.update_layout(height=300, margin=dict(l=10, r=10, t=10, b=10), 
                                paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
         st.plotly_chart(fig_comp, use_container_width=True)
 
-    if st.button("✅ Finalizar Auditoría"): st.balloons()
+    if st.button("✅ Finalizar"): st.balloons()
