@@ -32,7 +32,6 @@ if check_password():
         .info-text { font-size: 0.8rem; color: #a1a1a1; margin-top: 4px; line-height: 1.2; }
         .section-title { margin-top: 20px; margin-bottom: 2px; color: #3b82f6; font-size: 1.2rem; font-weight: bold; }
         .section-desc { font-size: 0.85rem; color: #8899a6; margin-bottom: 15px; }
-        .stTable { background-color: #161b22; border-radius: 10px; }
         </style>
         """, unsafe_allow_html=True)
 
@@ -48,19 +47,30 @@ if check_password():
         st.write("---")
         renta_trad = st.number_input("Renta Tradicional/Mes", value=1800)
 
-    # --- 3. LÓGICA FINANCIERA BASE ---
+    # --- 3. LÓGICA FINANCIERA CENTRAL (Cálculos Globales) ---
+    # Inversión Inicial
     inicial = val_depa * 0.20
     prestamo = val_depa - inicial
+    
+    # Hipoteca
     tem = (1 + tcea/100)**(1/12) - 1
     cuota = prestamo * (tem * (1 + tem)**(plazo_años*12)) / ((1 + tem)**(plazo_años*12) - 1)
-    mantenimiento_estimado = (val_depa * 0.03) / 12 # 3% anual aprox para Lima
     
-    ingreso_bruto_mes = tarifa * ocupacion_act * 0.85 # Neto de comisión Airbnb
-    impuesto_sunat = ingreso_bruto_mes * 0.05
-    egresos_mes = cuota + mantenimiento_estimado + impuesto_sunat
-    utilidad_neta_mes = ingreso_bruto_mes - egresos_mes
-    roi_actual = (utilidad_neta_mes * 12 / inicial) * 100
-    breakeven_dias = (cuota + mantenimiento_estimado) / (tarifa * 0.85 * 0.95)
+    # Costos Operativos (Mantenimiento 3% anual, Tradicional 1.5% anual)
+    mantenimiento_mes = (val_depa * 0.03) / 12
+    gastos_trad_mes = (val_depa * 0.015) / 12
+    
+    # Airbnb (Ingreso neto de comisión 15%, Impuesto Sunat 5%)
+    ingreso_bruto_mes_air = tarifa * ocupacion_act * 0.85
+    impuesto_air = ingreso_bruto_mes_air * 0.05
+    flujo_neto_air = ingreso_bruto_mes_air - cuota - mantenimiento_mes - impuesto_air
+    roi_actual_air = (flujo_neto_air * 12 / inicial) * 100
+    breakeven_dias = (cuota + mantenimiento_mes) / (tarifa * 0.85 * 0.95)
+
+    # Tradicional (Impuesto Sunat 5%)
+    impuesto_trad = renta_trad * 0.05
+    u_mes_trad = renta_trad - cuota - gastos_trad_mes - impuesto_trad
+    roi_actual_trad = (u_mes_trad * 12 / inicial) * 100
 
     # --- 4. TABS ---
     tab1, tab2, tab3 = st.tabs(["📊 Proyección de Flujos", "📈 Plusvalía y Patrimonio", "🛡️ Análisis de Riesgo"])
@@ -68,79 +78,71 @@ if check_password():
     with tab1:
         st.markdown('<div class="section-title">📊 Resumen de Flujos: Ingresos, Egresos y Utilidad</div>', unsafe_allow_html=True)
         
-        # CUADRO INFORMATIVO (TABLA)
+        # Tabla Informativa
         data_resumen = {
             "Concepto": ["Ingresos Brutos (Airbnb)", "Cuota Hipotecaria", "Mantenimiento / Otros", "Impuestos (Sunat)", "Egresos Totales", "Utilidad Neta"],
-            "Mensual (S/.)": [f"S/. {ingreso_bruto_mes:,.2f}", f"S/. -{cuota:,.2f}", f"S/. -{mantenimiento_estimado:,.2f}", f"S/. -{impuesto_sunat:,.2f}", f"S/. -{egresos_mes:,.2f}", f"S/. {utilidad_neta_mes:,.2f}"],
-            "Anual (S/.)": [f"S/. {ingreso_bruto_mes*12:,.2f}", f"S/. -{cuota*12:,.2f}", f"S/. -{mantenimiento_estimado*12:,.2f}", f"S/. -{impuesto_sunat*12:,.2f}", f"S/. -{egresos_mes*12:,.2f}", f"S/. {utilidad_neta_mes*12:,.2f}"]
+            "Mensual (S/.)": [f"S/. {ingreso_bruto_mes_air:,.2f}", f"S/. -{cuota:,.2f}", f"S/. -{mantenimiento_mes:,.2f}", f"S/. -{impuesto_air:,.2f}", f"S/. -{cuota+mantenimiento_mes+impuesto_air:,.2f}", f"S/. {flujo_neto_air:,.2f}"],
+            "Anual (S/.)": [f"S/. {ingreso_bruto_mes_air*12:,.2f}", f"S/. -{cuota*12:,.2f}", f"S/. -{mantenimiento_mes*12:,.2f}", f"S/. -{impuesto_air*12:,.2f}", f"S/. -{(cuota+mantenimiento_mes+impuesto_air)*12:,.2f}", f"S/. {flujo_neto_air*12:,.2f}"]
         }
-        df_resumen = pd.DataFrame(data_resumen)
-        st.table(df_resumen)
-        
-        st.metric("ROI Actual sobre Inicial", f"{roi_actual:.2f}%")
+        st.table(pd.DataFrame(data_resumen))
+        st.metric("ROI Actual sobre Inicial", f"{roi_actual_air:.2f}%")
 
-        # GRÁFICO DE FLUJOS (25 AÑOS)
+        # Gráfico Proyección 25 Años
         años_proy = 25
         meses = np.arange(1, años_proy * 12 + 1)
-        ingresos_linea = np.full(len(meses), ingreso_bruto_mes)
-        egresos_linea = [(mantenimiento_estimado + impuesto_sunat + (cuota if m <= (plazo_años * 12) else 0)) for m in meses]
-        utilidad_linea = ingresos_linea - np.array(egresos_linea)
+        ing_linea = np.full(len(meses), ingreso_bruto_mes_air)
+        egr_linea = [(mantenimiento_mes + impuesto_air + (cuota if m <= (plazo_años * 12) else 0)) for m in meses]
+        util_linea = ing_linea - np.array(egr_linea)
 
-        fig_flujos = go.Figure()
-        fig_flujos.add_trace(go.Scatter(x=meses/12, y=ingresos_linea, name="Ingresos", line=dict(color='#3b82f6')))
-        fig_flujos.add_trace(go.Scatter(x=meses/12, y=egresos_linea, name="Egresos", line=dict(color='#ef4444')))
-        fig_flujos.add_trace(go.Scatter(x=meses/12, y=utilidad_linea, name="Utilidad Neta", fill='tozeroy', line=dict(color='#10b981', width=3)))
-        fig_flujos.add_vline(x=plazo_años, line_dash="dash", line_color="orange")
-        fig_flujos.update_layout(height=400, title="Evolución de Ingresos vs Egresos (Fin de deuda en año " + str(plazo_años) + ")", 
-                                 paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
-        st.plotly_chart(fig_flujos, use_container_width=True)
+        fig_f = go.Figure()
+        fig_f.add_trace(go.Scatter(x=meses/12, y=ing_linea, name="Ingresos", line=dict(color='#3b82f6')))
+        fig_f.add_trace(go.Scatter(x=meses/12, y=egr_linea, name="Egresos", line=dict(color='#ef4444')))
+        fig_f.add_trace(go.Scatter(x=meses/12, y=util_linea, name="Utilidad Neta", fill='tozeroy', line=dict(color='#10b981', width=3)))
+        fig_f.add_vline(x=plazo_años, line_dash="dash", line_color="orange")
+        fig_f.update_layout(height=400, title="Flujo de Caja a 25 Años", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
+        st.plotly_chart(fig_f, use_container_width=True)
 
-        # GRÁFICO DE EVOLUCIÓN DEL ROI
+        # Gráfico Evolución ROI
         st.markdown('<div class="section-title">📈 Evolución del ROI Anualizado</div>', unsafe_allow_html=True)
-        st.markdown('<p class="section-desc">Retorno sobre la inversión inicial según la etapa del crédito.</p>', unsafe_allow_html=True)
-        
-        roi_evolucion = [(u * 12 / inicial) * 100 for u in utilidad_linea]
-        
-        fig_roi = go.Figure()
-        fig_roi.add_trace(go.Scatter(x=meses/12, y=roi_evolucion, name="ROI %", line=dict(color='#00ffcc', width=4), fill='tozeroy', fillcolor='rgba(0, 255, 204, 0.1)'))
-        fig_roi.update_layout(height=350, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white", 
-                              xaxis_title="Años", yaxis_title="ROI %", yaxis=dict(ticksuffix="%"))
+        roi_evol = [(u * 12 / inicial) * 100 for u in util_linea]
+        fig_roi = go.Figure(go.Scatter(x=meses/12, y=roi_evol, name="ROI %", line=dict(color='#00ffcc', width=4), fill='tozeroy', fillcolor='rgba(0, 255, 204, 0.1)'))
+        fig_roi.update_layout(height=300, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white", yaxis_title="ROI %")
         st.plotly_chart(fig_roi, use_container_width=True)
 
     with tab2:
         st.markdown('<div class="section-title">📈 Crecimiento Patrimonial y Plusvalía</div>', unsafe_allow_html=True)
         plus_input = st.slider("Plusvalía Anual (%)", 0.0, 10.0, 4.0)
-        años_pat = np.arange(0, 26)
-        val_mkt = [val_depa * (1 + plus_input/100)**a for a in años_pat]
-        saldo_d = [prestamo * (1 - a/plazo_años) if a < plazo_años else 0 for a in años_pat]
-        equity = [v - d for v, d in zip(val_mkt, saldo_d)]
+        años_p = np.arange(0, 26)
+        v_mkt = [val_depa * (1 + plus_input/100)**a for a in años_p]
+        s_deuda = [prestamo * (1 - a/plazo_años) if a < plazo_años else 0 for a in años_p]
+        eq = [v - d for v, d in zip(v_mkt, s_deuda)]
+        
         fig_p = go.Figure()
-        fig_p.add_trace(go.Bar(x=años_pat, y=val_mkt, name="Valor Mercado", marker_color='#1f2630'))
-        fig_p.add_trace(go.Scatter(x=años_pat, y=equity, name="Equity (Patrimonio)", fill='tozeroy', line=dict(color='#00ffcc')))
+        fig_p.add_trace(go.Bar(x=años_p, y=v_mkt, name="Valor Mercado", marker_color='#1f2630'))
+        fig_p.add_trace(go.Scatter(x=años_p, y=eq, name="Equity", fill='tozeroy', line=dict(color='#00ffcc')))
         fig_p.update_layout(height=400, barmode='overlay', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
         st.plotly_chart(fig_p, use_container_width=True)
 
     with tab3:
         st.markdown('<div class="section-title">🛡️ Análisis de Sensibilidad Operativa</div>', unsafe_allow_html=True)
-        c_be, _ = st.columns([1, 2])
-        c_be.metric("Punto Equilibrio", f"{np.ceil(breakeven_dias):.0f} días")
+        st.metric("Punto Equilibrio", f"{np.ceil(breakeven_dias):.0f} días")
+        
         col_t, col_l = st.columns([1, 2])
-        d_tabla = [5, 10, 15, 20, 25, 30]
-        r_tabla = [((((tarifa * d * 0.85 * 0.95) - cuota - mantenimiento_estimado) * 12 / inicial) * 100) for d in d_tabla]
+        d_t = [5, 10, 15, 20, 25, 30]
+        r_t = [((((tarifa * d * 0.85 * 0.95) - cuota - mantenimiento_mes) * 12 / inicial) * 100) for d in d_t]
         with col_t:
-            df = pd.DataFrame({"Ocupación": [f"{d} d" for d in d_tabla], "ROI %": r_tabla})
-            st.dataframe(df.style.format({"ROI %": "{:.1f}%"}).background_gradient(cmap='RdYlGn', axis=0), hide_index=True)
+            st.dataframe(pd.DataFrame({"Ocupación": [f"{d} d" for d in d_t], "ROI %": r_t}).style.format({"ROI %": "{:.1f}%"}).background_gradient(cmap='RdYlGn'), hide_index=True)
         with col_l:
             d_g = list(range(5, 31))
-            r_g = [((((tarifa * d * 0.85 * 0.95) - cuota - mantenimiento_estimado) * 12 / inicial) * 100) for d in d_g]
+            r_g = [((((tarifa * d * 0.85 * 0.95) - cuota - mantenimiento_mes) * 12 / inicial) * 100) for d in d_g]
             fig_s = go.Figure(go.Scatter(x=d_g, y=r_g, mode='lines', line=dict(color='#00ffcc', width=4)))
             fig_s.add_hline(y=0, line_dash="dot", line_color="red")
             fig_s.update_layout(height=250, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
             st.plotly_chart(fig_s, use_container_width=True)
+
         st.write("---")
-        labels = ['Airbnb', 'Tradicional']
-        valores = [flujo_neto_air * 12, (renta_trad - cuota - (val_depa*0.015/12) - (renta_trad*0.05)) * 12]
-        fig_c = go.Figure([go.Bar(x=labels, y=valores, marker_color=['#3b82f6', '#10b981'], text=[f"S/. {v:,.0f}" for v in valores], textposition='inside', insidetextanchor='middle', textfont=dict(size=22, family="Arial Black"))])
+        st.markdown('<div class="section-title">⚖️ Airbnb vs. Tradicional (Anual)</div>', unsafe_allow_html=True)
+        fig_c = go.Figure([go.Bar(x=['Airbnb', 'Tradicional'], y=[flujo_neto_air*12, u_mes_trad*12], marker_color=['#3b82f6', '#10b981'], text=[f"S/. {flujo_neto_air*12:,.0f}", f"S/. {u_mes_trad*12:,.0f}"], textposition='inside', insidetextanchor='middle', textfont=dict(size=22, family="Arial Black"))])
         fig_c.update_layout(height=300, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
         st.plotly_chart(fig_c, use_container_width=True)
 
