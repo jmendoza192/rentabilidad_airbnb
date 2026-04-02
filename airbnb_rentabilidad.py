@@ -26,7 +26,7 @@ def check_password():
     return True
 
 if check_password():
-    # RESTAURACIÓN DE CSS ORIGINAL (BORDES, TARJETAS Y TAMAÑOS)
+    # MANTENER CSS ORIGINAL (BORDES, TARJETAS Y TAMAÑOS)
     st.markdown("""
         <style>
         .main { background-color: #0e1117; }
@@ -65,12 +65,6 @@ if check_password():
             text-align: center; 
             margin-bottom: 25px; 
         }
-        .compare-card { 
-            background-color: #161b22; 
-            padding: 20px; 
-            border-radius: 10px; 
-            border: 1px solid #30363d; 
-        }
         </style>
         """, unsafe_allow_html=True)
 
@@ -88,16 +82,20 @@ if check_password():
         st.write("---")
         renta_trad = st.number_input("Renta Tradicional (S/.)", value=1800)
 
-    # --- 3. LÓGICA FINANCIERA ---
+    # --- 3. LÓGICA FINANCIERA (CORREGIDA) ---
     inicial_banco = val_depa * 0.20
     inversion_total_real = inicial_banco + inv_amoblado
     prestamo = val_depa - inicial_banco
     tem = (1 + tcea/100)**(1/12) - 1
     cuota = prestamo * (tem * (1 + tem)**(plazo_años*12)) / ((1 + tem)**(plazo_años*12) - 1)
+    
     mantenimiento_mes = (val_depa * 0.03) / 12
     ingreso_bruto_air = tarifa * ocupacion_act * 0.85
     impuesto_air = ingreso_bruto_air * 0.05
     flujo_neto_air = ingreso_bruto_air - cuota - mantenimiento_mes - impuesto_air
+    
+    # Variables críticas para comparativas (Tab 3 y 4)
+    roi_anual_air = (flujo_neto_air * 12 / inversion_total_real) * 100
     breakeven_dias = (cuota + mantenimiento_mes) / (tarifa * 0.85 * 0.95)
     u_anual_trad = (renta_trad - cuota - (val_depa*0.015/12) - (renta_trad*0.05)) * 12
 
@@ -156,13 +154,12 @@ if check_password():
         st.plotly_chart(fig_p, use_container_width=True)
         st.markdown('<div class="info-text">💡 <b>Interpretación:</b> El área verde (Equity) es tu riqueza real. Crece por dos vías: el pago de la deuda bancaria y el aumento de valor de la propiedad por plusvalía.</div>', unsafe_allow_html=True)
 
-    with tab3: # MANTENIENDO CORRECCIONES DE V25
+    with tab3:
         st.markdown('<div class="section-title">🛡️ Escenarios de Estrés</div>', unsafe_allow_html=True)
         st.metric("Punto de Equilibrio Crítico", f"{np.ceil(breakeven_dias):.0f} días/mes")
         st.markdown('<p class="info-text"><b>Nota Informativa:</b> Cantidad mínima de noches necesarias para cubrir el 100% de la cuota bancaria y gastos fijos sin inyectar capital propio.</p>', unsafe_allow_html=True)
         
         st.markdown('<div class="section-title">📉 1. ROI vs Días de Ocupación</div>', unsafe_allow_html=True)
-        st.markdown('<p class="info-text"><b>Nota Informativa:</b> Análisis de sensibilidad que muestra el Retorno sobre la Inversión (ROI) anualizado según la ocupación mensual.</p>', unsafe_allow_html=True)
         c_o1, c_o2 = st.columns([1, 2])
         d_range = list(range(5, 31)); roi_o = [((((tarifa * d * 0.85 * 0.95) - cuota - mantenimiento_mes) * 12 / inversion_total_real) * 100) for d in d_range]
         with c_o1:
@@ -173,7 +170,6 @@ if check_password():
             fig_o.update_layout(height=400, margin=dict(t=10, b=10), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white"); st.plotly_chart(fig_o, use_container_width=True)
 
         st.markdown('<div class="section-title">📈 2. ROI vs Tarifa Diaria</div>', unsafe_allow_html=True)
-        st.markdown('<p class="info-text"><b>Nota Informativa:</b> Proyección de rentabilidad considerando las variaciones de precio por temporada alta/baja o competencia.</p>', unsafe_allow_html=True)
         c_t1, c_t2 = st.columns([1, 2])
         t_range = list(range(int(tarifa*0.5), int(tarifa*1.5), 10)); roi_t = [((((t * ocupacion_act * 0.85 * 0.95) - cuota - mantenimiento_mes) * 12 / inversion_total_real) * 100) for t in t_range]
         with c_t1:
@@ -187,7 +183,9 @@ if check_password():
         st.markdown('<div class="section-title">🔄 Airbnb vs Tradicional</div>', unsafe_allow_html=True)
         c_comp1, c_comp2 = st.columns(2)
         c_comp1.metric("Ventaja Airbnb (Anual)", f"S/. {(flujo_neto_air*12) - u_anual_trad:,.0f}")
+        # La variable u_anual_trad ya existe, el error se eliminó definiendo roi_anual_air arriba
         c_comp2.metric("Eficiencia", f"{(roi_anual_air/((u_anual_trad/inversion_total_real)*100)):.1f}x")
+        
         fig_c = go.Figure([go.Bar(x=['Airbnb', 'Tradicional'], y=[flujo_neto_air*12, u_anual_trad], marker_color=['#3b82f6', '#10b981'], text=[f"S/. {flujo_neto_air*12:,.0f}", f"S/. {u_anual_trad:,.0f}"], textposition='inside')])
         fig_c.update_layout(height=400, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white"); st.plotly_chart(fig_c, use_container_width=True)
 
