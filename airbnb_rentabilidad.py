@@ -34,11 +34,6 @@ if check_password():
         div[data-testid="stMetric"] { background-color: #1f2630; padding: 15px; border-radius: 10px; border: 1px solid #30363d; }
         .info-text { font-size: 0.85rem; color: #a1a1a1; margin-top: 8px; line-height: 1.4; font-style: italic; }
         .section-title { margin-top: 25px; margin-bottom: 5px; color: #3b82f6; font-size: 1.3rem; font-weight: bold; }
-        .section-desc { font-size: 0.85rem; color: #8899a6; margin-bottom: 15px; }
-        .compare-card { background-color: #161b22; padding: 20px; border-radius: 10px; border: 1px solid #30363d; height: 100%; }
-        .highlight-card { background-color: #1e293b; padding: 20px; border-radius: 10px; border: 1px solid #3b82f6; text-align: center; margin-bottom: 20px; }
-        /* Ajuste para que st.table se vea bien en modo oscuro */
-        .stTable { background-color: #161b22; border-radius: 10px; }
         </style>
         """, unsafe_allow_html=True)
 
@@ -101,13 +96,13 @@ if check_password():
         fig_p.update_layout(height=450, barmode='overlay', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white"); st.plotly_chart(fig_p, use_container_width=True)
         st.markdown('<div class="info-text">💡 <b>Interpretación del Patrimonio:</b> Al inicio, tu Equity (área verde) representa solo tu inversión inicial. Con el tiempo, esta zona crece por la amortización de la deuda y la plusvalía.</div>', unsafe_allow_html=True)
 
-    with tab3: # ACTUALIZADO: st.table PARA MOSTRAR FILAS ÍNTEGRAMENTE
+    with tab3: # ACTUALIZADO: COLORES SEMÁFORO + TABLA FIJA
         st.markdown('<div class="section-title">🛡️ Escenarios de Estrés</div>', unsafe_allow_html=True)
         st.metric("Punto de Equilibrio Crítico", f"{np.ceil(breakeven_dias):.0f} días/mes")
         st.markdown('<p class="info-text">Nota: Cantidad mínima de noches para cubrir el 100% de obligaciones financieras sin pérdidas.</p>', unsafe_allow_html=True)
         st.write("---")
         
-        # Gráfico 1: ROI vs Días de Ocupación
+        # Gráfico 1: ROI vs Días
         st.markdown('<div class="section-title">📉 1. ROI vs Días de Ocupación</div>', unsafe_allow_html=True)
         st.markdown('<p class="info-text">Analiza cómo varía el retorno anual sobre la inversión según la demanda mensual del mercado.</p>', unsafe_allow_html=True)
         col_o1, col_o2 = st.columns([1, 2])
@@ -115,10 +110,11 @@ if check_password():
         with col_o1:
             df_o = pd.DataFrame({
                 "Días": [f"{d}d" for d in [10, 15, 20, 25, 30]], 
-                "ROI %": [f"{roi_o[d_range.index(d)]:.1f}%" for d in [10, 15, 20, 25, 30]]
+                "ROI %": [roi_o[d_range.index(d)] for d in [10, 15, 20, 25, 30]]
             })
-            # st.table muestra todas las filas sin scroll ni despliegue
-            st.table(df_o)
+            # Aplicación de semáforo con background_gradient
+            st.dataframe(df_o.style.format({"ROI %": "{:.1f}%"}).background_gradient(cmap='RdYlGn', subset=["ROI %"]), 
+                         height=212, use_container_width=True, hide_index=True)
         with col_o2:
             fig_o = go.Figure(go.Scatter(x=d_range, y=roi_o, line=dict(color='#3b82f6', width=3)))
             fig_o.add_hline(y=0, line_dash="dot", line_color="red")
@@ -127,7 +123,7 @@ if check_password():
 
         st.write("---")
         
-        # Gráfico 2: ROI vs Tarifa Diaria
+        # Gráfico 2: ROI vs Tarifa
         st.markdown('<div class="section-title">📈 2. ROI vs Tarifa Diaria</div>', unsafe_allow_html=True)
         st.markdown('<p class="info-text">Proyección de rentabilidad ante fluctuaciones de precios por temporada o competencia en la zona.</p>', unsafe_allow_html=True)
         col_t1, col_t2 = st.columns([1, 2])
@@ -135,17 +131,17 @@ if check_password():
         with col_t1:
             df_t = pd.DataFrame({
                 "Tarifa": [f"S/ {t}" for t in t_range[::2]], 
-                "ROI %": [f"{r:.1f}%" for r in roi_t[::2]]
+                "ROI %": roi_t[::2]
             })
-            # st.table muestra todas las filas sin scroll ni despliegue
-            st.table(df_t)
+            # Aplicación de semáforo con background_gradient
+            st.dataframe(df_t.style.format({"ROI %": "{:.1f}%"}).background_gradient(cmap='RdYlGn', subset=["ROI %"]), 
+                         height=212, use_container_width=True, hide_index=True)
         with col_t2:
             fig_t = go.Figure(go.Scatter(x=t_range, y=roi_t, line=dict(color='#00ffcc', width=3)))
             fig_t.add_hline(y=0, line_dash="dot", line_color="red")
             fig_t.update_layout(height=400, margin=dict(t=10, b=10), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white", xaxis_title="Tarifa S/.", yaxis_title="ROI %")
             st.plotly_chart(fig_t, use_container_width=True)
 
-    # --- PESTAÑA 4 ---
     with tab4:
         st.markdown('<div class="section-title">🔄 Airbnb vs Tradicional</div>', unsafe_allow_html=True)
         c_comp1, c_comp2 = st.columns(2)
