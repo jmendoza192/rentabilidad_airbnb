@@ -26,7 +26,7 @@ def check_password():
     return True
 
 if check_password():
-    # ESTILOS CSS (SOBRIOS Y PROFESIONALES)
+    # ESTILOS CSS
     st.markdown("""
         <style>
         .main { background-color: #0e1117; }
@@ -36,7 +36,7 @@ if check_password():
             background-color: #1f2630; padding: 20px; border-radius: 12px; border: 1px solid #30363d; 
         }
         .info-text { 
-            font-size: 0.9rem; color: #a1a1a1; margin-top: 10px; padding: 10px;
+            font-size: 0.9rem; color: #a1a1a1; margin-top: 10px; padding: 12px;
             border-left: 2px solid #3b82f6; background-color: #161b22; line-height: 1.5; 
         }
         .section-title { 
@@ -88,13 +88,13 @@ if check_password():
     with tab1:
         st.markdown('<div class="section-title">Desembolso Inicial</div>', unsafe_allow_html=True)
         st.metric("Inversión Total Real", f"S/. {inversion_total_real:,.0f}")
-        st.markdown('<div class="info-text">Capital líquido inicial: 20% cuota inicial + inversión en amoblado y equipamiento.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="info-text">Capital líquido inicial requerido (Cuota inicial + Amoblado).</div>', unsafe_allow_html=True)
         
         st.markdown('<div class="section-title">Detalle de Flujo Mensual</div>', unsafe_allow_html=True)
         df_flujo = pd.DataFrame({
             "Concepto": ["(+) Ingresos Airbnb", "(-) Cuota Hipotecaria", "(-) Gastos Operativos", "(-) Impuestos (SUNAT)", "(=) FLUJO NETO"],
             "Monto": [f"S/. {ingreso_bruto_air:,.2f}", f"S/. -{cuota:,.2f}", f"S/. -{mantenimiento_mes:,.2f}", f"S/. -{impuesto_air:,.2f}", f"S/. {flujo_neto_air:,.2f}"],
-            "Detalle": ["Ingreso neto proyectado.", "Pago mensual al banco.", "Mantenimiento y servicios.", "Impuesto 1ra Cat.", "Utilidad líquida."]
+            "Detalle": ["Ingreso tras comisión plataforma.", "Costo del préstamo.", "Mantenimiento y servicios.", "Impuesto 5%.", "Utilidad líquida."]
         })
         st.table(df_flujo)
         
@@ -107,11 +107,14 @@ if check_password():
         
         if año_rec: 
             st.markdown(f"""<div class="highlight-card"><span style="color: #3b82f6; font-size: 2.5rem; font-weight: bold;">{año_rec:.1f} Años</span></div>""", unsafe_allow_html=True)
-            st.markdown(f"""<div class="info-text"><b>Análisis de Recuperación:</b> Indica el tiempo necesario para que los flujos netos cubran el desembolso inicial de S/. {inversion_total_real:,.0f}.</div>""", unsafe_allow_html=True)
+            st.markdown(f"""<div class="info-text"><b>Análisis de Recuperación:</b> Tiempo estimado para cubrir el desembolso inicial de S/. {inversion_total_real:,.0f}.</div>""", unsafe_allow_html=True)
         
+        # GRÁFICO P1: ÁREAS ROJO/VERDE
         fig_pb = go.Figure(); f_np = np.array(flujo_acum)
-        fig_pb.add_trace(go.Scatter(x=meses_pb/12, y=flujo_acum, line=dict(color='#3b82f6', width=3), name="Flujo Acumulado"))
-        fig_pb.update_layout(title="Curva de Recuperación de Inversión (S/.)", height=600, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white", xaxis_title="Años", yaxis_title="S/. Acumulados")
+        fig_pb.add_trace(go.Scatter(x=meses_pb/12, y=np.where(f_np <= 0, f_np, 0), fill='tozeroy', fillcolor='rgba(239, 68, 68, 0.3)', line=dict(color='rgba(0,0,0,0)'), showlegend=False))
+        fig_pb.add_trace(go.Scatter(x=meses_pb/12, y=np.where(f_np >= 0, f_np, 0), fill='tozeroy', fillcolor='rgba(16, 185, 129, 0.3)', line=dict(color='rgba(0,0,0,0)'), showlegend=False))
+        fig_pb.add_trace(go.Scatter(x=meses_pb/12, y=flujo_acum, line=dict(color='#3b82f6', width=4), name="Flujo Acumulado"))
+        fig_pb.update_layout(title="Curva de Retorno (S/. Acumulados)", height=600, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white", xaxis_title="Años", yaxis_title="S/.")
         st.plotly_chart(fig_pb, use_container_width=True)
 
     # --- TAB 2: PLUSVALÍA ---
@@ -128,7 +131,7 @@ if check_password():
         fig_p = go.Figure(); fig_p.add_trace(go.Bar(x=años_p, y=v_mkt, name="Valor Mercado", marker_color='#1f2630')); fig_p.add_trace(go.Scatter(x=años_p, y=eq, name="Equity", fill='tozeroy', line=dict(color='#00ffcc', width=3)))
         fig_p.update_layout(height=450, barmode='overlay', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white"); st.plotly_chart(fig_p, use_container_width=True)
 
-    # --- TAB 3: SENSIBILIDAD ---
+    # --- TAB 3: SENSIBILIDAD (REUBICACIÓN DE INFO) ---
     with tab3:
         st.markdown('<div class="section-title">Análisis de Resiliencia y Estrés</div>', unsafe_allow_html=True)
         c_m1, c_m2, c_m3 = st.columns(3)
@@ -136,17 +139,19 @@ if check_password():
         c_m2.metric("Ocupación Objetivo", f"{ocupacion_act} días")
         c_m3.metric("ROI Est. Anual", f"{roi_anual_air:.1f}%")
         
+        # OCUPACIÓN
         st.markdown('<div class="section-title">Sensibilidad: ROI vs Ocupación Mensual</div>', unsafe_allow_html=True)
-        st.markdown('<div class="info-text"><b>Impacto de la Demanda:</b> Analiza cómo varía tu rentabilidad anual (ROI) según el número de noches reservadas al mes. El color indica zonas de riesgo (rojo) y zonas de alta rentabilidad (verde).</div>', unsafe_allow_html=True)
         c_o1, c_o2 = st.columns([1, 2])
         d_range = list(range(5, 31)); roi_o = [((((tarifa * d * 0.85 * 0.95) - cuota - mantenimiento_mes) * 12 / inversion_total_real) * 100) for d in d_range]
         with c_o1:
             df_o = pd.DataFrame({"Días": [f"{d}d" for d in [10, 15, 20, 25, 30]], "ROI %": [roi_o[d_range.index(d)] for d in [10, 15, 20, 25, 30]]})
             st.dataframe(df_o.style.format({"ROI %": "{:.1f}%"}).background_gradient(cmap='RdYlGn', subset=["ROI %"]), height=212, use_container_width=True, hide_index=True)
         with c_o2:
-            fig_o = go.Figure(go.Scatter(x=d_range, y=roi_o, line=dict(color='#3b82f6', width=3))); fig_o.update_layout(title="Curva de Rentabilidad por Ocupación", height=400, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white", xaxis_title="Noches/Mes", yaxis_title="ROI %")
+            fig_o = go.Figure(go.Scatter(x=d_range, y=roi_o, line=dict(color='#3b82f6', width=3))); fig_o.update_layout(title="Curva ROI por Ocupación", height=400, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white", xaxis_title="Noches/Mes", yaxis_title="ROI %")
             st.plotly_chart(fig_o, use_container_width=True)
+        st.markdown('<div class="info-text"><b>Impacto de Demanda:</b> Analiza cómo varía tu rentabilidad anual según el número de noches reservadas. El punto donde cruza el 0% es tu umbral de supervivencia operativa.</div>', unsafe_allow_html=True)
 
+        # TARIFA
         st.markdown('<div class="section-title">Sensibilidad: ROI vs Tarifa Diaria (ADR)</div>', unsafe_allow_html=True)
         c_t1, c_t2 = st.columns([1, 2])
         t_range = list(range(int(tarifa*0.5), int(tarifa*1.5), 10)); roi_t = [((((t * ocupacion_act * 0.85 * 0.95) - cuota - mantenimiento_mes) * 12 / inversion_total_real) * 100) for t in t_range]
@@ -154,22 +159,33 @@ if check_password():
             df_t = pd.DataFrame({"Tarifa": [f"S/ {t}" for t in t_range[::2]], "ROI %": roi_t[::2]})
             st.dataframe(df_t.style.format({"ROI %": "{:.1f}%"}).background_gradient(cmap='RdYlGn', subset=["ROI %"]), height=400, use_container_width=True, hide_index=True)
         with c_t2:
-            fig_t = go.Figure(go.Scatter(x=t_range, y=roi_t, line=dict(color='#00ffcc', width=3))); fig_t.update_layout(title="Curva de Rentabilidad por Tarifa", height=400, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white", xaxis_title="Tarifa S/.", yaxis_title="ROI %")
+            fig_t = go.Figure(go.Scatter(x=t_range, y=roi_t, line=dict(color='#00ffcc', width=3))); fig_t.update_layout(title="Curva ROI por Tarifa", height=400, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white", xaxis_title="Tarifa S/.", yaxis_title="ROI %")
             st.plotly_chart(fig_t, use_container_width=True)
+        st.markdown('<div class="info-text"><b>Sensibilidad de Precio:</b> Evalúa la capacidad de ajustar precios ante cambios en el mercado sin comprometer el pago de la deuda bancaria.</div>', unsafe_allow_html=True)
 
-    # --- TAB 4: COMPARATIVA ---
+    # --- TAB 4: COMPARATIVA (BAR CHART REFINADO) ---
     with tab4:
         st.markdown('<div class="section-title">Comparativa de Modelos de Renta</div>', unsafe_allow_html=True)
         c_comp1, c_comp2 = st.columns(2)
         with c_comp1:
             st.metric("Ventaja Airbnb (Anual)", f"S/. {(flujo_neto_air*12) - u_anual_trad:,.0f}")
-            st.markdown('<div class="info-text"><b>Utilidad Extra Anual:</b> Representa la ganancia adicional en soles que genera el modelo Airbnb frente al alquiler tradicional de un año.</div>', unsafe_allow_html=True)
+            st.markdown('<div class="info-text"><b>Utilidad Extra:</b> Ganancia adicional anual generada por Airbnb frente al alquiler tradicional de largo plazo.</div>', unsafe_allow_html=True)
         with c_comp2:
             st.metric("Factor de Eficiencia", f"{(roi_anual_air/((u_anual_trad/inversion_total_real)*100)):.1f}x")
-            st.markdown('<div class="info-text"><b>Multiplicador de Renta:</b> Indica cuántas veces es más rentable el modelo de renta corta sobre el capital invertido comparado con el modelo tradicional.</div>', unsafe_allow_html=True)
+            st.markdown('<div class="info-text"><b>Multiplicador:</b> Veces que la rentabilidad de Airbnb supera al modelo convencional.</div>', unsafe_allow_html=True)
         
         st.markdown('<div class="section-title">Utilidad Neta Anualizada</div>', unsafe_allow_html=True)
-        fig_c = go.Figure([go.Bar(x=['Airbnb', 'Tradicional'], y=[flujo_neto_air*12, u_anual_trad], marker_color=['#3b82f6', '#10b981'], text=[f"S/. {flujo_neto_air*12:,.0f}", f"S/. {u_anual_trad:,.0f}"], textposition='inside')])
-        fig_c.update_layout(height=400, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white"); st.plotly_chart(fig_c, use_container_width=True)
+        # BARRAS CON ETIQUETAS CENTRADAS, NEGRITA Y MÁS GRANDES
+        fig_c = go.Figure([go.Bar(
+            x=['Airbnb', 'Tradicional'], 
+            y=[flujo_neto_air*12, u_anual_trad], 
+            marker_color=['#3b82f6', '#10b981'], 
+            text=[f"S/. {flujo_neto_air*12:,.0f}", f"S/. {u_anual_trad:,.0f}"], 
+            textposition='inside',
+            textfont=dict(size=18, color="white", family="Arial Black"),
+            insidetextanchor='middle'
+        )])
+        fig_c.update_layout(height=450, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
+        st.plotly_chart(fig_c, use_container_width=True)
 
     if st.button("✅ Finalizar Auditoría"): st.balloons()
