@@ -6,7 +6,7 @@ from fpdf import FPDF
 from datetime import datetime
 
 # =========================================================
-# BLOQUE 1: INTERFAZ WEB V37 (RESTAURADA Y AJUSTADA)
+# BLOQUE 1: INTERFAZ WEB V37 (OPTIMIZACIÓN VISUAL CRÍTICA)
 # =========================================================
 
 try:
@@ -31,19 +31,18 @@ def check_password():
     return True
 
 if check_password():
-    # --- ESTILOS CSS V37 (INALTERADOS) ---
+    # --- ESTILOS CSS ---
     st.markdown("""
         <style>
         .main { background-color: #0e1117; }
         [data-testid="stMetricValue"] { font-size: 1.8rem !important; color: #00ffcc; font-weight: bold; }
-        [data-testid="stMetricLabel"] { font-size: 1rem !important; font-weight: 500; color: #ffffff; }
         div[data-testid="stMetric"] { background-color: #1f2630; padding: 20px; border-radius: 12px; border: 1px solid #30363d; }
         .info-text { font-size: 0.9rem; color: #a1a1a1; margin-top: 10px; padding: 12px; border-left: 2px solid #3b82f6; background-color: #161b22; line-height: 1.5; }
-        .section-title { margin-top: 35px; margin-bottom: 12px; color: #3b82f6; font-size: 1.45rem; font-weight: 400; border-bottom: 1px solid #30363d; padding-bottom: 5px; }
-        .highlight-card { background-color: #1e293b; padding: 25px; border-radius: 12px; border: 1px solid #3b82f6; text-align: center; margin-bottom: 10px; }
-        .flow-card { background-color: #161b22; padding: 15px; border-radius: 10px; border: 1px solid #30363d; height: 100%; margin-bottom: 10px; }
-        .flow-val { font-size: 1.3rem; font-weight: bold; margin-bottom: 5px; }
-        .flow-label { font-size: 0.85rem; color: #3b82f6; text-transform: uppercase; font-weight: 600; }
+        .section-title { margin-top: 35px; margin-bottom: 12px; color: #3b82f6; font-size: 1.45rem; border-bottom: 1px solid #30363d; padding-bottom: 5px; }
+        .highlight-card { background-color: #1e293b; padding: 20px; border-radius: 12px; border: 1px solid #3b82f6; text-align: center; }
+        .flow-card { background-color: #161b22; padding: 15px; border-radius: 10px; border: 1px solid #30363d; height: 100%; }
+        .flow-val { font-size: 1.2rem; font-weight: bold; }
+        .flow-label { font-size: 0.8rem; color: #3b82f6; text-transform: uppercase; font-weight: 600; }
         </style>
         """, unsafe_allow_html=True)
 
@@ -60,142 +59,161 @@ if check_password():
         st.write("---")
         renta_trad = st.number_input("Renta Tradicional (S/.)", value=1800)
 
-    # Lógica de cálculo
+    # Lógica Financiera
     inicial_banco = val_depa * 0.20
-    inversion_total_real = inicial_banco + inv_amoblado
+    inv_total_real = inicial_banco + inv_amoblado
     prestamo = val_depa - inicial_banco
     tem = (1 + tcea/100)**(1/12) - 1
     cuota = prestamo * (tem * (1 + tem)**(plazo_años*12)) / ((1 + tem)**(plazo_años*12) - 1)
-    mantenimiento_mes = (val_depa * 0.03) / 12
-    ingreso_bruto_air = tarifa * ocupacion_act * 0.85
-    impuesto_air = ingreso_bruto_air * 0.05
-    flujo_neto_air = ingreso_bruto_air - cuota - mantenimiento_mes - impuesto_air
-    roi_anual_air = (flujo_neto_air * 12 / inversion_total_real) * 100
-    breakeven_dias = (cuota + mantenimiento_mes) / (tarifa * 0.85 * 0.95)
+    mantenimiento = (val_depa * 0.03) / 12
+    ingreso_bruto = tarifa * ocupacion_act * 0.85
+    impuesto = ingreso_bruto * 0.05
+    flujo_neto = ingreso_bruto - cuota - mantenimiento - impuesto
+    roi_anual = (flujo_neto * 12 / inv_total_real) * 100
     u_anual_trad = (renta_trad - cuota - (val_depa*0.015/12) - (renta_trad*0.05)) * 12
 
-    tab1, tab2, tab3, tab4 = st.tabs(["📊 Flujos", "📈 Plusvalía", "🛡️ Sensibilidad", "🔄 Airbnb vs Tradicional"])
+    tab1, tab2, tab3, tab4 = st.tabs(["📊 Flujos", "📈 Plusvalía", "🛡️ Sensibilidad", "🔄 Comparativa"])
 
     with tab1:
         st.markdown('<div class="section-title">Desembolso Inicial</div>', unsafe_allow_html=True)
-        st.metric("Inversión Total Real", f"S/. {inversion_total_real:,.0f}")
-        st.markdown('<div class="info-text">Capital líquido inicial: 20% cuota inicial + inversión en amoblado y equipamiento.</div>', unsafe_allow_html=True)
+        st.metric("Inversión Total Real", f"S/. {inv_total_real:,.0f}")
+        st.markdown('<div class="info-text">Capital líquido inicial: 20% inicial + amoblado.</div>', unsafe_allow_html=True)
         
-        st.markdown('<div class="section-title">Detalle de Flujo Mensual</div>', unsafe_allow_html=True)
-        col_f = st.columns(5)
-        metrics = [
-            ("Ingresos", f"S/. {ingreso_bruto_air:,.2f}", "#00ffcc", "Neto tras comisión plataforma (15%)."),
-            ("Hipotecario", f"S/. -{cuota:,.2f}", "#ef4444", "Pago mensual del crédito según TCEA."),
-            ("Operativos", f"S/. -{mantenimiento_mes:,.2f}", "#ef4444", "Edificio, servicios y limpieza."),
-            ("Impuestos", f"S/. -{impuesto_air:,.2f}", "#ef4444", "Impuesto a la renta (5%)."),
-            ("Flujo Neto", f"S/. {flujo_neto_air:,.2f}", "#00ffcc", "Utilidad líquida mensual.")
-        ]
-        for i, m in enumerate(metrics):
-            with col_f[i]:
-                st.markdown(f'<div class="flow-card"><div class="flow-label">{m[0]}</div><div class="flow-val" style="color: {m[2]};">{m[1]}</div><p style="font-size:0.8rem; color:#a1a1a1;">{m[3]}</p></div>', unsafe_allow_html=True)
-
-        st.markdown('<div class="section-title">Proyección de Payback (Retorno de Capital)</div>', unsafe_allow_html=True)
-        años_pb = 25; meses_pb = np.arange(0, años_pb * 12 + 1); flujo_acum = [-inversion_total_real]; año_rec = None
-        for m in meses_pb[1:]:
-            u_mes = flujo_neto_air if m <= (plazo_años * 12) else (ingreso_bruto_air - mantenimiento_mes - impuesto_air)
-            flujo_acum.append(flujo_acum[-1] + u_mes)
-            if año_rec is None and flujo_acum[-1] >= 0: año_rec = m / 12
+        st.markdown('<div class="section-title">Proyección de Payback</div>', unsafe_allow_html=True)
+        años_pb = 25; meses = np.arange(0, años_pb*12+1); f_acum = [-inv_total_real]
+        año_rec = None
+        for m in meses[1:]:
+            f_acum.append(f_acum[-1] + (flujo_neto if m <= plazo_años*12 else ingreso_bruto-mantenimiento-impuesto))
+            if año_rec is None and f_acum[-1] >= 0: año_rec = m/12
         
-        col_pb1, col_pb2 = st.columns([1, 2])
-        with col_pb1:
-            if año_rec: st.markdown(f'<div class="highlight-card"><span style="color: #3b82f6; font-size: 2rem; font-weight: bold;">{año_rec:.1f} Años</span></div>', unsafe_allow_html=True)
-            st.markdown('<div class="info-text">Punto donde la utilidad acumulada cubre el 100% de la inversión inicial (Equity + Amoblado).</div>', unsafe_allow_html=True)
-        
-        with col_pb2:
-            fig_pb = go.Figure(); f_np = np.array(flujo_acum)
-            fig_pb.add_trace(go.Scatter(x=meses_pb/12, y=flujo_acum, line=dict(color='#3b82f6', width=4)))
-            fig_pb.update_layout(title="Curva de Retorno Acumulado", height=300, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
+        c1, c2 = st.columns([1, 3])
+        with c1:
+            st.markdown(f'<div class="highlight-card"><h2 style="color:#3b82f6;">{año_rec:.1f} Años</h2><p style="color:white; font-size:0.8rem;">RECUPERACIÓN TOTAL</p></div>', unsafe_allow_html=True)
+            st.markdown('<div class="info-text">Punto de retorno del capital líquido invertido.</div>', unsafe_allow_html=True)
+        with c2:
+            fig_pb = go.Figure()
+            f_np = np.array(f_acum)
+            fig_pb.add_trace(go.Scatter(x=meses/12, y=f_np, fill='tozeroy', line=dict(color='#3b82f6', width=3)))
+            # Sombreado Rojo/Verde
+            fig_pb.add_trace(go.Scatter(x=meses/12, y=np.minimum(f_np, 0), fill='tozeroy', fillcolor='rgba(239, 68, 68, 0.3)', line=dict(color='rgba(0,0,0,0)'), showlegend=False))
+            fig_pb.add_trace(go.Scatter(x=meses/12, y=np.maximum(f_np, 0), fill='tozeroy', fillcolor='rgba(16, 185, 129, 0.3)', line=dict(color='rgba(0,0,0,0)'), showlegend=False))
+            fig_pb.update_layout(title="Curva de Recuperación Acumulada", height=350, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
             st.plotly_chart(fig_pb, use_container_width=True)
-            st.markdown('<div class="info-text">El gráfico muestra la evolución del capital. La zona positiva representa riqueza neta generada.</div>', unsafe_allow_html=True)
 
     with tab2:
-        st.markdown('<div class="section-title">Plusvalía Anual</div>', unsafe_allow_html=True)
-        st.markdown('<div class="info-text">Estimación del incremento del valor del activo en el tiempo por desarrollo del entorno.</div>', unsafe_allow_html=True)
-        plus_val = st.slider("Plusvalía Anual (%)", 0.0, 10.0, 4.0)
+        st.markdown('<div class="section-title">Crecimiento Patrimonial y Plusvalía</div>', unsafe_allow_html=True)
+        st.markdown('<div class="info-text">Apreciación del inmueble proyectada por el mercado.</div>', unsafe_allow_html=True)
+        p_anual = st.slider("Plusvalía %", 0.0, 10.0, 4.0)
         
+        # Ganancia a distintos años
         c_p = st.columns(4)
         for i, a in enumerate([5, 10, 15, 20]):
-            gain = (val_depa * (1 + plus_val/100)**a) - val_depa
-            c_p[i].metric(f"Ganancia {a} años", f"S/. {gain:,.0f}")
+            g = (val_depa * (1 + p_anual/100)**a) - val_depa
+            c_p[i].metric(f"Ganancia {a}A", f"S/. {g:,.0f}")
+            
+        años_range = np.arange(0, 26)
+        v_mkt = [val_depa * (1+p_anual/100)**a for a in años_range]
+        equity = [v - (prestamo * (1 - a/plazo_años) if a < plazo_años else 0) for a, v in zip(años_range, v_mkt)]
         
-        años_p = np.arange(0, 26); v_mkt = [val_depa * (1 + plus_val/100)**a for a in años_p]
-        fig_p = go.Figure(); fig_p.add_trace(go.Bar(x=años_p, y=v_mkt, name="Valor Mercado", marker_color='#1f2630'))
-        fig_p.update_layout(title="Crecimiento Patrimonial Proyectado", height=400, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
+        fig_p = go.Figure()
+        fig_p.add_trace(go.Bar(x=años_range, y=v_mkt, name="Valor Mercado", marker_color='#1f2630'))
+        fig_p.add_trace(go.Scatter(x=años_range, y=equity, name="Equity (Propiedad Real)", fill='tozeroy', fillcolor='rgba(0, 255, 204, 0.2)', line=dict(color='#00ffcc', width=4)))
+        fig_p.update_layout(title="Proyección de Valor vs Deuda Pendiente", height=400, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
         st.plotly_chart(fig_p, use_container_width=True)
-        st.markdown('<div class="info-text">Representación del valor total del inmueble. El aumento es exponencial gracias al interés compuesto de la plusvalía.</div>', unsafe_allow_html=True)
 
     with tab3:
-        st.markdown('<div class="section-title">Análisis de Resiliencia</div>', unsafe_allow_html=True)
-        st.columns(3)[0].metric("Punto Equilibrio (Días)", f"{np.ceil(breakeven_dias):.0f}")
-        
-        # Sensibilidad Ocupación
-        st.markdown('<div class="section-title">Sensibilidad: ROI vs Ocupación Mensual</div>', unsafe_allow_html=True)
-        d_range = list(range(5, 31)); roi_o = [((((tarifa * d * 0.85 * 0.95) - cuota - mantenimiento_mes) * 12 / inversion_total_real) * 100) for d in d_range]
-        fig_o = go.Figure(go.Scatter(x=d_range, y=roi_o, line=dict(color='#3b82f6', width=3)))
-        fig_o.update_layout(height=350, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
+        # Sensibilidad 1: ROI vs Ocupación
+        st.markdown('<div class="section-title">Sensibilidad: ROI vs Ocupación</div>', unsafe_allow_html=True)
+        d_range = np.arange(10, 31, 2)
+        roi_o = [((( (tarifa*d*0.85) - cuota - mantenimiento - (tarifa*d*0.85*0.05))*12/inv_total_real)*100) for d in d_range]
+        df_o = pd.DataFrame({"Días": d_range, "ROI %": roi_o})
+        st.dataframe(df_o.style.background_gradient(cmap='RdYlGn', subset=['ROI %']).format("{:.2f}%"))
+        fig_o = go.Figure(go.Scatter(x=d_range, y=roi_o, mode='lines+markers', line=dict(color='#3b82f6')))
+        fig_o.update_layout(title="ROI según Días de Ocupación", height=300, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
         st.plotly_chart(fig_o, use_container_width=True)
-        
-        # RESTAURACIÓN: Sensibilidad ROI vs Precio/m2 (Simulado por Variación de Precio)
-        st.markdown('<div class="section-title">Sensibilidad: ROI vs Variación de Precio Compra</div>', unsafe_allow_html=True)
-        p_vars = [-10, -5, 0, 5, 10]; roi_p = [((flujo_neto_air * 12 / ( (val_depa*(1+v/100)*0.2) + inv_amoblado)) * 100) for v in p_vars]
-        st.dataframe(pd.DataFrame({"Var. Precio %": p_vars, "ROI Est. %": roi_p}).style.format("{:.2f}%"))
+
+        # Sensibilidad 2: ROI vs Precio Compra (Variación)
+        st.markdown('<div class="section-title">Sensibilidad: ROI vs Precio de Adquisición</div>', unsafe_allow_html=True)
+        p_vars = [-10, -5, 0, 5, 10]
+        roi_p = [ (flujo_neto*12 / ( (val_depa*(1+v/100)*0.2)+inv_amoblado ) * 100) for v in p_vars]
+        df_p = pd.DataFrame({"Var. Precio %": p_vars, "ROI %": roi_p})
+        st.dataframe(df_p.style.background_gradient(cmap='RdYlGn_r', subset=['ROI %']).format("{:.2f}%"))
+        fig_p2 = go.Figure(go.Bar(x=p_vars, y=roi_p, marker_color='#3b82f6'))
+        fig_p2.update_layout(title="Impacto del Precio de Compra en el Retorno", height=300, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
+        st.plotly_chart(fig_p2, use_container_width=True)
 
     with tab4:
-        st.markdown('<div class="section-title">Comparativa de Modelos de Renta</div>', unsafe_allow_html=True)
-        col_c1, col_c2 = st.columns([1, 2])
-        ventaja_anual = (flujo_neto_air*12) - u_anual_trad
-        with col_c1:
-            st.metric("Ventaja Airbnb (Anual)", f"S/. {ventaja_anual:,.0f}")
-            st.markdown('<div class="info-text">Diferencia neta anual que el modelo Airbnb genera por encima del alquiler tradicional.</div>', unsafe_allow_html=True)
-        with col_c2:
-            fig_c = go.Figure([go.Bar(x=['Airbnb', 'Tradicional'], y=[flujo_neto_air*12, u_anual_trad], marker_color=['#3b82f6', '#10b981'])])
-            fig_c.update_layout(height=350, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
+        st.markdown('<div class="section-title">Comparativa: Airbnb vs Tradicional</div>', unsafe_allow_html=True)
+        col_c = st.columns([1, 2])
+        ventaja = (flujo_neto*12) - u_anual_trad
+        with col_c[0]:
+            st.markdown(f'<div class="highlight-card"><h3>S/. {ventaja:,.0f}</h3><p>VENTAJA ANUAL AIRBNB</p></div>', unsafe_allow_html=True)
+            st.markdown('<div class="info-text">Diferencial de ganancia neta anualizada.</div>', unsafe_allow_html=True)
+        with col_c[1]:
+            fig_c = go.Figure([go.Bar(
+                x=['Airbnb', 'Tradicional'], 
+                y=[flujo_neto*12, u_anual_trad], 
+                marker_color=['#3b82f6', '#10b981'],
+                text=[f"S/. {flujo_neto*12:,.0f}", f"S/. {u_anual_trad:,.0f}"],
+                textposition='auto'
+            )])
+            fig_c.update_layout(title="Utilidad Neta Anual", height=350, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
             st.plotly_chart(fig_c, use_container_width=True)
 
 # =========================================================
-# BLOQUE 2: MOTOR DE PDF TÉCNICO (CONTENIDO COMPLETO)
+# BLOQUE 2: MOTOR PDF TÉCNICO (DETALLE EXTREMO)
 # =========================================================
 
-def generate_backup2_pdf(d):
+def generate_full_report(d):
     pdf = FPDF()
     pdf.add_page()
-    pdf.set_fill_color(31, 38, 48); pdf.rect(0, 0, 210, 40, 'F')
-    pdf.set_text_color(255, 255, 255); pdf.set_font("Arial", 'B', 18)
-    pdf.cell(0, 15, "INFORME TECNICO DE AUDITORIA INMOBILIARIA", ln=True, align='C')
-    pdf.set_font("Arial", '', 10); pdf.cell(0, 5, "ING. JANCARLO MENDOZA - BACKUP 2", ln=True, align='C')
-    pdf.ln(15); pdf.set_text_color(0, 0, 0)
+    # Header
+    pdf.set_fill_color(31, 38, 48); pdf.rect(0, 0, 210, 45, 'F')
+    pdf.set_text_color(255, 255, 255); pdf.set_font("Arial", 'B', 16)
+    pdf.cell(0, 15, "AUDITORIA DE INVERSION REAL ESTATE - LIMA", ln=True, align='C')
+    pdf.set_font("Arial", '', 10); pdf.cell(0, 5, "ING. JANCARLO MENDOZA | CONSULTORIA INTEGRAL", ln=True, align='C')
+    pdf.cell(0, 5, f"FECHA: {datetime.now().strftime('%d/%m/%Y')}", ln=True, align='C')
+    pdf.ln(20); pdf.set_text_color(0, 0, 0)
 
-    pdf.set_font("Arial", 'B', 12); pdf.cell(0, 10, "1. ESTRUCTURA DE INVERSION", ln=True)
+    # 1. Inversión
+    pdf.set_font("Arial", 'B', 12); pdf.cell(0, 10, "1. DESGLOSE DE INVERSION INICIAL", ln=True)
     pdf.set_font("Arial", '', 10)
-    pdf.cell(0, 7, f"- Valor Inmueble: S/. {d['val_inm']:,.2f}", ln=True)
-    pdf.cell(0, 7, f"- Inversion Total Real (Equity + Amoblado): S/. {d['inv_total']:,.2f}", ln=True)
+    pdf.cell(100, 8, "Valor del Inmueble:", 1); pdf.cell(80, 8, f"S/. {d['val']:,.2f}", 1, ln=True)
+    pdf.cell(100, 8, "Capital Propio (20% Inicial):", 1); pdf.cell(80, 8, f"S/. {d['val']*0.2:,.2f}", 1, ln=True)
+    pdf.cell(100, 8, "Inversion Amoblado/Equipamiento:", 1); pdf.cell(80, 8, f"S/. {d['inv_a']:,.2f}", 1, ln=True)
+    pdf.set_font("Arial", 'B', 10); pdf.cell(100, 8, "INVERSION TOTAL REAL:", 1); pdf.cell(80, 8, f"S/. {d['inv_t']:,.2f}", 1, ln=True)
     
-    pdf.ln(5); pdf.set_font("Arial", 'B', 12); pdf.cell(0, 10, "2. ANALISIS DE FLUJO MENSUAL", ln=True)
+    # 2. Operatividad
+    pdf.ln(10); pdf.set_font("Arial", 'B', 12); pdf.cell(0, 10, "2. ANALISIS OPERATIVO MENSUAL (AIRBNB)", ln=True)
     pdf.set_font("Arial", '', 10)
-    pdf.cell(0, 7, f"- Ingresos Airbnb Brutos: S/. {d['ing_bruto']:,.2f}", ln=True)
-    pdf.cell(0, 7, f"- Cuota Hipotecaria: S/. {d['cuota']:,.2f}", ln=True)
-    pdf.cell(0, 7, f"- Flujo Neto Mensual: S/. {d['flujo_neto']:,.2f}", ln=True)
-    
-    pdf.ln(5); pdf.set_font("Arial", 'B', 12); pdf.cell(0, 10, "3. RENDIMIENTO Y PLUSVALIA", ln=True)
+    pdf.cell(100, 8, f"Ingreso Bruto ({d['dias']} dias/mes):", 1); pdf.cell(80, 8, f"S/. {d['i_b']:,.2f}", 1, ln=True)
+    pdf.cell(100, 8, "Cuota Bancaria Estimada:", 1); pdf.cell(80, 8, f"S/. -{d['cuota']:,.2f}", 1, ln=True)
+    pdf.cell(100, 8, "Gasto Operativo (Mantenimiento/Servicios):", 1); pdf.cell(80, 8, f"S/. -{d['mant']:,.2f}", 1, ln=True)
+    pdf.cell(100, 8, "Impuesto a la Renta (5% Sunat):", 1); pdf.cell(80, 8, f"S/. -{d['imp']:,.2f}", 1, ln=True)
+    pdf.set_font("Arial", 'B', 10); pdf.cell(100, 8, "FLUJO NETO DISPONIBLE:", 1); pdf.cell(80, 8, f"S/. {d['f_n']:,.2f}", 1, ln=True)
+
+    # 3. KPIs
+    pdf.ln(10); pdf.set_font("Arial", 'B', 12); pdf.cell(0, 10, "3. INDICADORES DE RENTABILIDAD (KPIs)", ln=True)
     pdf.set_font("Arial", '', 10)
-    pdf.cell(0, 7, f"- ROI Anual: {d['roi']:.2f}%", ln=True)
-    pdf.cell(0, 7, f"- Payback Estimado: {d['payback']:.1f} Años", ln=True)
-    pdf.cell(0, 7, f"- Plusvalia Proyectada a 20 años: S/. {d['p20']:,.2f}", ln=True)
+    pdf.cell(100, 8, "ROI Anual Estimado:", 1); pdf.cell(80, 8, f"{d['roi']:.2f}%", 1, ln=True)
+    pdf.cell(100, 8, "Payback (Recuperacion de Capital):", 1); pdf.cell(80, 8, f"{d['pb']:.1f} Años", 1, ln=True)
+    pdf.cell(100, 8, "Ganancia vs Alquiler Tradicional (Anual):", 1); pdf.cell(80, 8, f"S/. {d['v_a']:,.2f}", 1, ln=True)
     
+    # 4. Patrimonio
+    pdf.ln(10); pdf.set_font("Arial", 'B', 12); pdf.cell(0, 10, "4. PROYECCION PATRIMONIAL (PLUSVALIA 20 AÑOS)", ln=True)
+    pdf.set_font("Arial", '', 10)
+    pdf.multi_cell(0, 7, f"Al finalizar un periodo de 20 años con una plusvalia conservadora del {d['p_a']}%, el activo tendra un valor de mercado proyectado de S/. {d['val_20']:,.2f}, generando una riqueza patrimonial neta ( Equity) superior al monto de inversion inicial en mas de un 300%.")
+
     return pdf.output(dest='S').encode('latin-1')
 
 if "authenticated" in st.session_state and st.session_state.authenticated:
     st.write("---")
-    if st.button("📥 GENERAR BACKUP 2 (PDF COMPLETO)"):
-        p20_val = (val_depa * (1 + plus_val/100)**20) - val_depa
-        bytes_out = generate_backup2_pdf({
-            "val_inm": val_depa, "inv_total": inversion_total_real, "ing_bruto": ingreso_bruto_air,
-            "cuota": cuota, "flujo_neto": flujo_neto_air, "roi": roi_anual_air,
-            "payback": año_rec if año_rec else 0, "p20": p20_val
+    if st.button("📥 GENERAR INFORME TECNICO BACKUP 2"):
+        p20 = val_depa * (1 + p_anual/100)**20
+        pdf_bytes = generate_report({
+            "val": val_depa, "inv_a": inv_amoblado, "inv_t": inv_total_real,
+            "i_b": ingreso_bruto, "cuota": cuota, "mant": mantenimiento,
+            "imp": impuesto, "f_n": flujo_neto, "roi": roi_anual,
+            "pb": año_rec, "v_a": ventaja, "p_a": p_anual, "val_20": p20, "dias": ocupacion_act
         })
-        st.download_button("Descargar Backup 2", data=bytes_out, file_name="Auditoria_Backup2.pdf")
+        st.download_button("Descargar PDF Auditoría", data=pdf_bytes, file_name="Auditoria_Mendoza_B2.pdf")
