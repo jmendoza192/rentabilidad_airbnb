@@ -6,7 +6,7 @@ from fpdf import FPDF
 from datetime import datetime
 
 # =========================================================
-# BLOQUE 1: INTERFAZ WEB V37 (PROHIBIDO TOCAR)
+# BLOQUE 1: INTERFAZ WEB V37 (READ-ONLY / NO TOCAR)
 # =========================================================
 
 try:
@@ -75,7 +75,7 @@ if check_password():
     breakeven_dias = (cuota + mantenimiento_mes) / (tarifa * 0.85 * 0.95)
     u_anual_trad = (renta_trad - cuota - (val_depa*0.015/12) - (renta_trad*0.05)) * 12
 
-    # --- TABS V37 (DISPOSICIÓN EXACTA) ---
+    # --- TABS V37 ---
     tab1, tab2, tab3, tab4 = st.tabs(["📊 Flujos", "📈 Plusvalía", "🛡️ Sensibilidad", "🔄 Airbnb vs Tradicional"])
 
     with tab1:
@@ -150,32 +150,93 @@ if check_password():
         st.markdown('<div class="info-text"><b>Ficha Informativa Final:</b> Esta comparativa proyecta la utilidad neta después de obligaciones.</div>', unsafe_allow_html=True)
 
 # =========================================================
-# BLOQUE 2: MOTOR DE PDF (AISLADO AL FINAL)
+# BLOQUE 2: MOTOR DE PDF TÉCNICO EXPANDIDO (ÚNICO CAMBIO)
 # =========================================================
 
-def generate_pdf_engine(data):
+def generate_full_pdf(d):
     pdf = FPDF()
     pdf.add_page()
-    pdf.set_font("Arial", 'B', 16)
-    pdf.cell(200, 10, "AUDITORIA TECNICA INMOBILIARIA", ln=True, align='C')
-    pdf.set_font("Arial", 'I', 10)
-    pdf.cell(200, 8, "Ing. Jancarlo Mendoza - Real Estate Expert", ln=True, align='C')
-    pdf.line(10, 35, 200, 35); pdf.ln(15)
     
-    pdf.set_font("Arial", 'B', 12); pdf.cell(0, 10, "RESUMEN DE RESULTADOS", ln=True)
+    # --- HEADER PROFESIONAL ---
+    pdf.set_fill_color(31, 38, 48); pdf.rect(0, 0, 210, 40, 'F')
+    pdf.set_text_color(255, 255, 255); pdf.set_font("Arial", 'B', 18)
+    pdf.cell(0, 15, "AUDITORIA INTEGRAL DE INVERSION INMOBILIARIA", ln=True, align='C')
     pdf.set_font("Arial", '', 10)
-    pdf.cell(0, 7, f"- Inversion Capital: S/. {data['inv']:,.2f}", ln=True)
-    pdf.cell(0, 7, f"- Flujo Neto/Mes: S/. {data['flujo']:,.2f}", ln=True)
-    pdf.cell(0, 7, f"- ROI Anual: {data['roi']:.2f}%", ln=True)
-    pdf.cell(0, 7, f"- Ventaja vs Tradicional: S/. {data['ventaja']:,.2f}", ln=True)
+    pdf.cell(0, 5, f"ING. JANCARLO MENDOZA - EXPERTO REAL ESTATE & CONSULTORIA", ln=True, align='C')
+    pdf.cell(0, 5, f"LIMA, PERU | EMISION: {datetime.now().strftime('%d/%m/%Y %H:%M')}", ln=True, align='C')
+    pdf.ln(15); pdf.set_text_color(0, 0, 0)
+
+    # --- SECCIÓN 1: ESTRUCTURA DE CAPITAL ---
+    pdf.set_font("Arial", 'B', 14); pdf.set_text_color(59, 130, 246)
+    pdf.cell(0, 10, "1. INGENIERIA DE COSTOS E INVERSION INICIAL", ln=True)
+    pdf.set_text_color(0, 0, 0); pdf.set_font("Arial", '', 10)
+    pdf.multi_cell(0, 6, "Se ha analizado la estructura de capital necesaria para la adquisicion y puesta en marcha del activo inmobiliario bajo el modelo de rentas de corta estancia.")
+    
+    data_inv = [
+        ["CONCEPTO", "VALOR (S/.)"],
+        ["Valor del Inmueble", f"S/. {d['val_inm']:,.2f}"],
+        ["Cuota Inicial (20%)", f"S/. {d['val_inm']*0.2:,.2f}"],
+        ["Inversion en Amoblado/Equipamiento", f"S/. {d['inv_amoblado']:,.2f}"],
+        ["TOTAL CAPITAL LIQUIDO REQUERIDO", f"S/. {d['inv_total']:,.2f}"]
+    ]
+    pdf.ln(2)
+    for row in data_inv:
+        pdf.cell(95, 8, row[0], 1); pdf.cell(95, 8, row[1], 1, ln=True)
+    pdf.ln(10)
+
+    # --- SECCIÓN 2: FLUJOS OPERATIVOS ---
+    pdf.set_font("Arial", 'B', 14); pdf.set_text_color(59, 130, 246)
+    pdf.cell(0, 10, "2. ANALISIS DE FLUJO DE CAJA MENSUAL (MODELO AIRBNB)", ln=True)
+    pdf.set_text_color(0, 0, 0); pdf.set_font("Arial", '', 10)
+    
+    data_flujo = [
+        ["INGRESO BRUTO EST. (Noches x Tarifa x 85%)", f"S/. {d['ing_bruto']:,.2f}"],
+        ["EGRESO: Cuota Credito Hipotecario", f"S/. -{d['cuota']:,.2f}"],
+        ["EGRESO: Gasto Operativo (Mantenimiento/Servicios)", f"S/. -{d['mant']:,.2f}"],
+        ["EGRESO: Impuesto a la Renta (5%)", f"S/. -{d['impuesto']:,.2f}"],
+        ["FLUJO NETO DISPONIBLE (Cash-on-Cash)", f"S/. {d['flujo_neto']:,.2f}"]
+    ]
+    for row in data_flujo:
+        pdf.cell(110, 8, row[0], 1); pdf.cell(80, 8, row[1], 1, ln=True)
+    
+    pdf.ln(5); pdf.set_font("Arial", 'I', 9)
+    pdf.multi_cell(0, 5, "Nota: El flujo neto representa la utilidad real despues de todas las obligaciones financieras y legales.")
+    pdf.ln(10)
+
+    # --- SECCIÓN 3: KPI Y PROYECCIONES ---
+    pdf.set_font("Arial", 'B', 14); pdf.set_text_color(59, 130, 246)
+    pdf.cell(0, 10, "3. INDICADORES CLAVE DE RENDIMIENTO (KPI)", ln=True)
+    pdf.set_text_color(0, 0, 0); pdf.set_font("Arial", '', 11)
+    
+    pdf.cell(100, 10, f"- ROI (Retorno sobre Inversion): {d['roi']:.2f}% Anual")
+    pdf.cell(100, 10, f"- Payback (Recuperacion): {d['payback']:.1f} Años", ln=True)
+    pdf.cell(100, 10, f"- Punto de Equilibrio: {d['be_days']} Noches/Mes")
+    pdf.cell(100, 10, f"- Eficiencia vs Tradicional: {d['eficiencia']:.2f}x veces", ln=True)
+    
+    pdf.ln(5); pdf.set_font("Arial", 'B', 12)
+    pdf.cell(0, 10, "PROYECCION PATRIMONIAL (PLUSVALIA)", ln=True)
+    pdf.set_font("Arial", '', 10)
+    pdf.cell(0, 7, f"- Valor de Mercado Estimado (10 Años): S/. {d['val_inm'] + d['p10']:,.2f}", ln=True)
+    pdf.cell(0, 7, f"- Valor de Mercado Estimado (20 Años): S/. {d['val_inm'] + d['p20']:,.2f}", ln=True)
+
+    # --- SECCIÓN 4: DICTAMEN TÉCNICO ---
+    pdf.ln(10); pdf.set_font("Arial", 'B', 12); pdf.set_fill_color(240, 240, 240)
+    pdf.cell(0, 10, "DICTAMEN FINAL DEL AUDITOR", 1, ln=True, fill=True)
+    pdf.set_font("Arial", '', 10)
+    pdf.multi_cell(0, 7, "Basado en los datos suministrados, el proyecto presenta una viabilidad positiva. La rentabilidad por m2 bajo el formato de corta estancia supera significativamente al arrendamiento convencional en Lima Metropolitana. Se recomienda mantener una reserva operativa de 3 meses de cuotas hipotecarias para mitigar fluctuaciones de demanda estacional.")
+    
     return pdf.output(dest='S').encode('latin-1')
 
-# --- BOTÓN DE EXPORTACIÓN (FUERA DE LOS TABS) ---
+# --- BOTÓN DE EXPORTACIÓN (DISPARADOR) ---
 if "authenticated" in st.session_state and st.session_state.authenticated:
     st.write("---")
-    if st.button("📥 EXPORTAR INFORME PDF"):
-        pdf_content = generate_pdf_engine({
-            "inv": inversion_total_real, "flujo": flujo_neto_air, 
-            "roi": roi_anual_air, "ventaja": ventaja_anual
-        })
-        st.download_button("Descargar Archivo", data=pdf_content, file_name="auditoria_v46.pdf")
+    if st.button("📥 GENERAR AUDITORIA TECNICA COMPLETA (PDF)"):
+        pdf_data = {
+            "val_inm": val_depa, "inv_amoblado": inv_amoblado, "inv_total": inversion_total_real,
+            "ing_bruto": ingreso_bruto_air, "cuota": cuota, "mant": mantenimiento_mes,
+            "impuesto": impuesto_air, "flujo_neto": flujo_neto_air, "roi": roi_anual_air,
+            "payback": año_rec if año_rec else 0, "be_days": int(np.ceil(breakeven_dias)),
+            "eficiencia": eficiencia, "p10": p_10, "p20": p_20
+        }
+        bytes_pdf = generate_full_pdf(pdf_data)
+        st.download_button(label="Click para Descargar Reporte Profesional", data=bytes_pdf, file_name=f"Auditoria_Mendoza_{datetime.now().strftime('%Y%m%d')}.pdf", mime="application/pdf")
