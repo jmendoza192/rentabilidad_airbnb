@@ -6,12 +6,15 @@ from fpdf import FPDF
 from datetime import datetime
 
 # =========================================================
-# 0. CONFIGURACIÓN Y ESTÉTICA "TOTAL BASE FONT"
+# 0. CONFIGURACIÓN Y ESTÉTICA "TOTAL CONSISTENCY"
 # =========================================================
 try:
     st.set_page_config(page_title="Industrial Audit | JM", layout="wide")
 except:
     pass
+
+# Constante de Fuente para Gráficos
+BASE_FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
 
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
@@ -31,58 +34,63 @@ def check_password():
     return True
 
 if check_password():
-    # CSS: UNIFICACIÓN TOTAL DE FUENTES (SANS-SERIF PARA TEXTOS / MONO PARA DATOS)
-    st.markdown("""
+    # CSS: UNIFICACIÓN TOTAL (TEXTOS, NÚMEROS, TABLAS, INPUTS)
+    st.markdown(f"""
         <style>
-        /* Aplicar fuente base a todo el contenedor de Streamlit */
-        * {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
-        }
+        /* 1. Reset Global de Fuente */
+        html, body, [class*="css"], .stMarkdown, .stText, .stButton, .stSelectbox, .stNumberInput {{
+            font-family: {BASE_FONT} !important;
+        }}
+
+        /* 2. Forzar en Tablas y Dataframes */
+        .stTable, [data-testid="stTable"], [data-testid="stDataFrame"] {{
+            font-family: {BASE_FONT} !important;
+        }}
         
-        /* Forzar Monospace solo en números de tarjetas y tablas para precisión técnica */
-        .val-pos, .val-neg, .stTable, code {
-            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace !important;
-        }
+        /* 3. Números y Valores en Tarjetas */
+        .val-pos, .val-neg, .label-card {{
+            font-family: {BASE_FONT} !important;
+        }}
 
-        /* Reset de Inputs: Eliminar botones + y - */
-        button.step-up, button.step-down { display: none !important; }
+        /* 4. Eliminar botones de incremento (+/-) */
+        button.step-up, button.step-down {{ display: none !important; }}
         input[type=number]::-webkit-inner-spin-button, 
-        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-        input[type=number] { -moz-appearance: textfield; }
+        input[type=number]::-webkit-outer-spin-button {{ -webkit-appearance: none; margin: 0; }}
+        input[type=number] {{ -moz-appearance: textfield; }}
 
-        .main { background-color: #0e1117; }
+        .main {{ background-color: #0e1117; }}
         
         /* Títulos */
-        .section-title { 
+        .section-title {{ 
             color: #ffffff; font-size: 1.6rem; font-weight: 700; 
             padding: 12px 0; border-bottom: 3px solid #30363d; margin-bottom: 20px;
-        }
+            text-transform: uppercase;
+        }}
 
-        /* Tarjetas con Emojis y Letras Blancas */
-        .card-base {
+        /* Tarjetas Estilo Industrial Base */
+        .card-base {{
             border: 1px solid #30363d; border-radius: 4px; padding: 20px;
             text-align: center; margin-bottom: 15px; color: #ffffff !important;
-        }
-        .bg-blue { background-color: #1c3d5a; }
-        .bg-green { background-color: #1b4332; }
-        .bg-red { background-color: #4c1d1d; }
-        .bg-gray { background-color: #21262d; }
-        .bg-gold { background-color: #744210; }
-        .bg-indigo { background-color: #312e81; }
+        }}
+        .bg-blue {{ background-color: #1c3d5a; }}
+        .bg-green {{ background-color: #1b4332; }}
+        .bg-red {{ background-color: #4c1d1d; }}
+        .bg-gray {{ background-color: #21262d; }}
+        .bg-gold {{ background-color: #744210; }}
+        .bg-indigo {{ background-color: #312e81; }}
 
-        .val-pos { color: #60a5fa; font-size: 2.1rem; font-weight: bold; }
-        .val-neg { color: #f87171; font-size: 2.1rem; font-weight: bold; }
-        .label-card { font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; color: #ffffff; }
+        .val-pos {{ color: #60a5fa; font-size: 2.1rem; font-weight: bold; }}
+        .val-neg {{ color: #f87171; font-size: 2.1rem; font-weight: bold; }}
+        .label-card {{ font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; color: #ffffff; }}
 
-        .info-text { font-size: 0.95rem; color: #8b949e; margin-bottom: 15px; line-height: 1.5; }
-        .footer-tip {
+        .info-text {{ font-size: 0.95rem; color: #8b949e; margin-bottom: 15px; line-height: 1.5; }}
+        .footer-tip {{
             background-color: #161b22; color: #ffffff; padding: 20px;
             border: 1px solid #30363d; border-left: 5px solid #58a6ff; margin-top: 30px;
-        }
+        }}
         </style>
         """, unsafe_allow_html=True)
 
-    # Sidebar con selectores limpios
     with st.sidebar:
         st.header("📋 Parámetros de Auditoría")
         val_depa = st.number_input("Precio Propiedad (S/.) 🏠", value=250000)
@@ -116,14 +124,12 @@ if check_password():
     # --------------------------------------------------------- PESTAÑA 1
     with tabs[0]:
         st.markdown('<div class="section-title">🏗️ Estructura de Capital e Ingresos</div>', unsafe_allow_html=True)
-        st.markdown('<p class="info-text">Desglose de la inversión inicial para adquisición y puesta en marcha 🏢.</p>', unsafe_allow_html=True)
         c1, c2, c3 = st.columns(3)
         with c1: st.markdown(f'<div class="card-base bg-blue"><div class="label-card">Inicial Banco (20%) 🏢</div><div class="val-pos">S/. {inicial:,.0f}</div></div>', unsafe_allow_html=True)
         with c2: st.markdown(f'<div class="card-base bg-blue"><div class="label-card">Mobiliario/Equipos 🛋️</div><div class="val-pos">S/. {inv_amoblado:,.0f}</div></div>', unsafe_allow_html=True)
         with c3: st.markdown(f'<div class="card-base bg-gray"><div class="label-card">Cash-Out Total 💎</div><div class="val-pos">S/. {inv_total:,.0f}</div></div>', unsafe_allow_html=True)
         
         st.markdown('<div class="section-title">💸 Análisis Operativo Mensual</div>', unsafe_allow_html=True)
-        st.markdown('<p class="info-text">Balance operativo detallado bajo el modelo de rentas cortas 🧾.</p>', unsafe_allow_html=True)
         c4, c5, c6, c7 = st.columns(4)
         with c4: st.markdown(f'<div class="card-base bg-gray"><div class="label-card">Airbnb Bruto 🏨</div><div class="val-pos">S/. {ingreso_bruto:,.0f}</div></div>', unsafe_allow_html=True)
         with c5: st.markdown(f'<div class="card-base bg-gray"><div class="label-card">Cuota Hipotecaria 🏦</div><div class="val-neg">S/. -{cuota:,.0f}</div></div>', unsafe_allow_html=True)
@@ -146,82 +152,39 @@ if check_password():
         
         with cp1:
             st.markdown(f'<div class="card-base bg-blue" style="border: 2px solid white;"><div class="label-card">Tiempo de Payback ⏳</div><div class="val-pos" style="color:white; font-size:2.5rem;">{rec:.1f} Años</div></div>', unsafe_allow_html=True)
-            st.markdown('<p class="info-text">ℹ️ Indica el tiempo necesario para recuperar el capital propio aportado hoy.</p>', unsafe_allow_html=True)
         with cp2:
             fig_pb = go.Figure()
-            fig_pb.add_trace(go.Scatter(x=meses/12, y=[min(0, x) for x in f_acum], fill='tozeroy', fillcolor='rgba(248, 113, 113, 0.4)', line=dict(width=0), showlegend=False))
-            fig_pb.add_trace(go.Scatter(x=meses/12, y=[max(0, x) for x in f_acum], fill='tozeroy', fillcolor='rgba(16, 185, 129, 0.4)', line=dict(width=0), showlegend=False))
             fig_pb.add_trace(go.Scatter(x=meses/12, y=f_acum, line=dict(color='#ffffff', width=3), name="Balance"))
-            fig_pb.update_layout(title="<b>RECUPERACIÓN DE CAPITAL (ÁREAS DE ESTRÉS)</b>", height=400, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white", font_family='-apple-system')
+            # Forzar fuente en Plotly
+            fig_pb.update_layout(
+                title="<b>RECUPERACIÓN DE CAPITAL</b>", height=400,
+                paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+                font=dict(family=BASE_FONT, color="white")
+            )
             st.plotly_chart(fig_pb, use_container_width=True)
 
-        st.markdown('<div class="footer-tip">💡 <b>RECOMENDACIÓN:</b> La automatización del check-out incrementa la rotación y mejora el algoritmo de Airbnb 🌟.</div>', unsafe_allow_html=True)
-
-    # --------------------------------------------------------- PESTAÑA 2
-    with tabs[1]:
-        st.markdown('<div class="section-title">🏔️ Proyección de Valorización y Notas</div>', unsafe_allow_html=True)
-        st.markdown('<p class="info-text">Impacto de la plusvalía anual sobre el valor de mercado del inmueble 📈.</p>', unsafe_allow_html=True)
-        p_slider = st.slider("Plusvalía Anual Estimada (%)", 0.0, 10.0, 4.0)
-        
-        c_p = st.columns(4)
-        for i, a in enumerate([5, 10, 15, 20]):
-            g = (val_depa * (1 + p_slider/100)**a) - val_depa
-            with c_p[i]: 
-                st.markdown(f'<div class="card-base bg-blue"><div class="label-card">Plusvalía {a}A 📈</div><div class="val-pos" style="color:white;">S/. {g:,.0f}</div></div>', unsafe_allow_html=True)
-                st.caption(f"ℹ️ Ganancia de capital en {a} años.")
-        
-        st.markdown('<div class="section-title">📊 Evolución del Patrimonio Real (Equity)</div>', unsafe_allow_html=True)
-        años = np.arange(0, 26); v_mkt = [val_depa * (1+p_slider/100)**a for a in años]
-        eq = [v - (prestamo * (1 - a/plazo_años) if a < plazo_años else 0) for a, v in zip(años, v_mkt)]
-        
-        fig_p = go.Figure()
-        fig_p.add_trace(go.Bar(x=años, y=v_mkt, name="Valor Mercado", marker_color='#30363d'))
-        fig_p.add_trace(go.Scatter(x=años, y=eq, name="Equity Real", line=dict(color='#58a6ff', width=4)))
-        fig_p.update_layout(title="<b>CRECIMIENTO PATRIMONIAL VS AMORTIZACIÓN</b>", height=450, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white", font_family='-apple-system')
-        st.plotly_chart(fig_p, use_container_width=True)
-
-        st.markdown('<div class="footer-tip">📈 <b>TIP:</b> El Equity es su verdadera riqueza: el valor de la propiedad libre de deuda bancaria.</div>', unsafe_allow_html=True)
-
-    # --------------------------------------------------------- PESTAÑA 3
+    # --------------------------------------------------------- PESTAÑA 3 (SENSIBILIDAD)
     with tabs[2]:
         st.markdown('<div class="section-title">⚖️ Matriz de Sensibilidad de Rentabilidad</div>', unsafe_allow_html=True)
-        st.markdown('<p class="info-text">Análisis de resistencia del ROI frente a variaciones operativas 🚦.</p>', unsafe_allow_html=True)
         
         def color_roi(val):
             c = '#f87171' if val < 5 else '#fbbf24' if val < 10 else '#4ade80'
-            return f'background-color: {c}; color: #000; font-weight: bold; font-family: monospace;'
+            return f'background-color: {c}; color: #000; font-weight: bold;'
 
-        # Sensibilidad 1
         st.subheader("📍 Días de Ocupación vs ROI")
         cs1_t, cs1_g = st.columns([1, 1.8], vertical_alignment="center")
         d_range = [5, 10, 15, 20, 25, 30]
         roi_d = [((((tarifa_base*d*0.85) - cuota - mantenimiento - (tarifa_base*d*0.85*0.05))*12/inv_total)*100) for d in d_range]
         with cs1_t:
-            st.table(pd.DataFrame({"Días/Mes": d_range, "ROI %": roi_d}).style.map(color_roi, subset=['ROI %']).format({"ROI %": "{:.2f}%"}))
+            st.table(pd.DataFrame({"Días/Mes": d_range, "ROI %": roi_d}).style.applymap(color_roi, subset=['ROI %']).format({"ROI %": "{:.2f}%"}))
         with cs1_g:
-            fig_d = go.Figure(go.Scatter(x=d_range, y=roi_d, mode='lines+markers', line=dict(color='#60a5fa', width=4), marker=dict(size=12)))
-            fig_d.update_layout(height=650, title="<b>SENSIBILIDAD DE OCUPACIÓN</b>", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white", font_family='-apple-system')
+            fig_d = go.Figure(go.Scatter(x=d_range, y=roi_d, mode='lines+markers', line=dict(color='#60a5fa', width=4)))
+            fig_d.update_layout(height=600, font=dict(family=BASE_FONT, color="white"), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
             st.plotly_chart(fig_d, use_container_width=True)
 
-        # Sensibilidad 2
-        st.subheader("💰 Tarifa Noche vs ROI")
-        cs2_t, cs2_g = st.columns([1, 1.8], vertical_alignment="center")
-        t_range = list(range(int(tarifa_base)-30, int(tarifa_base)+40, 10))
-        roi_t = [((((t*ocupacion_act*0.85) - cuota - mantenimiento - (t*ocupacion_act*0.85*0.05))*12/inv_total)*100) for t in t_range]
-        with cs2_t:
-            st.table(pd.DataFrame({"Tarifa S/.": t_range, "ROI %": roi_t}).style.map(color_roi, subset=['ROI %']).format({"ROI %": "{:.2f}%"}))
-        with cs2_g:
-            fig_t = go.Figure(go.Scatter(x=t_range, y=roi_t, mode='lines+markers', line=dict(color='#34d399', width=4), marker=dict(size=12)))
-            fig_t.update_layout(height=650, title="<b>SENSIBILIDAD DE TARIFA</b>", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white", font_family='-apple-system')
-            st.plotly_chart(fig_t, use_container_width=True)
-
-        st.markdown('<div class="footer-tip">⚠️ <b>RECOMENDACIÓN:</b> Mantener un precio competitivo un 10% por debajo del mercado los primeros 3 meses para ganar tracción de reseñas.</div>', unsafe_allow_html=True)
-
-    # --------------------------------------------------------- PESTAÑA 4
+    # --------------------------------------------------------- PESTAÑA 4 (COMPARATIVA)
     with tabs[3]:
         st.markdown('<div class="section-title">🔄 Comparativa: Tradicional vs Airbnb</div>', unsafe_allow_html=True)
-        st.markdown('<p class="info-text">ℹ️ Evaluación comparativa de la utilidad neta líquida anualizada.</p>', unsafe_allow_html=True)
-        
         ventaja_anual = (flujo_neto * 12) - utilidad_trad
         dif_roi = roi_airbnb - roi_trad
         
@@ -239,17 +202,13 @@ if check_password():
             marker_color=['#10b981' if v > 0 else '#ef4444' for v in vals],
             text=[f'S/. {v:,.0f}' for v in vals],
             textposition='inside', insidetextanchor='middle',
-            textfont=dict(size=28, color='white', weight='bold', family='-apple-system')
+            textfont=dict(size=28, color='white', weight='bold', family=BASE_FONT)
         )])
-        fig_c.update_layout(title="<b>UTILIDAD NETA ANUALIZADA LÍQUIDA</b>", height=600, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
+        fig_c.update_layout(title="<b>UTILIDAD NETA ANUALIZADA LÍQUIDA</b>", height=600, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(family=BASE_FONT, color="white"))
         st.plotly_chart(fig_c, use_container_width=True)
-        
-        st.markdown('<p class="info-text"><b>Análisis Integral:</b> El gráfico muestra el flujo de caja libre tras pagar impuestos y deuda. El Modelo Airbnb maximiza el rendimiento del capital invertido, mientras que la Renta Tradicional ofrece estabilidad con menor flujo. La relación entre barras justifica el esfuerzo de gestión operativa turística.</p>', unsafe_allow_html=True)
-
-        st.markdown('<div class="footer-tip">🏁 <b>DICTAMEN:</b> La estrategia de renta corta es superior para activos ubicados en zonas de alta densidad turística y corporativa.</div>', unsafe_allow_html=True)
 
 # =========================================================
-# MOTOR DE PDF (UNIFICACIÓN SANS-SERIF)
+# MOTOR DE PDF
 # =========================================================
 def generate_master_pdf(d):
     pdf = FPDF()
@@ -271,9 +230,7 @@ def generate_master_pdf(d):
     pdf.cell(0, 7, f"- ROI Airbnb Proyectado: {d['roi']:.2f}% Anual", ln=True)
     pdf.cell(0, 7, f"- ROI Renta Tradicional: {d['roi_t']:.2f}% Anual", ln=True)
     pdf.cell(0, 7, f"- Payback Estimado: {d['pb']:.1f} Años", ln=True)
-    pdf.ln(10); pdf.set_font("Arial", 'I', 8)
-    pdf.multi_cell(0, 4, "AVISO: Este reporte es una herramienta técnica referencial. Los ingresos dependen de la gestión operativa y estacionalidad del mercado de Lima.")
-
+    
     return pdf.output(dest='S').encode('latin-1')
 
 if st.session_state.authenticated:
