@@ -50,7 +50,6 @@ if check_password():
         .audit-note {
             background-color: #1c1c1c; padding: 15px; border: 1px dashed #3b82f6; border-radius: 8px; margin-top: 20px;
         }
-        /* Estilo específico para tarjetas de flujo */
         .flow-card {
             background-color: #161b22; padding: 15px; border-radius: 10px; border: 1px solid #30363d;
             height: 100%; margin-bottom: 10px;
@@ -91,16 +90,14 @@ if check_password():
     # --- 4. TABS ---
     tab1, tab2, tab3, tab4 = st.tabs(["📊 Flujos", "📈 Plusvalía", "🛡️ Sensibilidad", "🔄 Airbnb vs Tradicional"])
 
-    # --- TAB 1: FLUJOS (TARJETAS INDEPENDIENTES) ---
+    # --- TAB 1: FLUJOS ---
     with tab1:
         st.markdown('<div class="section-title">Desembolso Inicial</div>', unsafe_allow_html=True)
         st.metric("Inversión Total Real", f"S/. {inversion_total_real:,.0f}")
-        st.markdown('<div class="info-text">Capital líquido inicial: 20% cuota inicial bancaria + presupuesto de amoblado y equipamiento.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="info-text">Capital líquido inicial: 20% cuota inicial + inversión en amoblado y equipamiento.</div>', unsafe_allow_html=True)
         
         st.markdown('<div class="section-title">Detalle de Flujo Mensual</div>', unsafe_allow_html=True)
-        
         col_f1, col_f2, col_f3, col_f4, col_f5 = st.columns(5)
-        
         with col_f1:
             st.markdown(f"""<div class="flow-card"><div class="flow-label">Ingresos</div><div class="flow-val" style="color: #00ffcc;">S/. {ingreso_bruto_air:,.2f}</div><p style="font-size:0.8rem; color:#a1a1a1;">Ingreso neto tras la comisión de la plataforma (15%).</p></div>""", unsafe_allow_html=True)
         with col_f2:
@@ -121,7 +118,7 @@ if check_password():
         
         if año_rec: 
             st.markdown(f"""<div class="highlight-card"><span style="color: #3b82f6; font-size: 2.5rem; font-weight: bold;">{año_rec:.1f} Años</span></div>""", unsafe_allow_html=True)
-            st.markdown(f"""<div class="info-text"><b>Análisis de Recuperación:</b> Tiempo estimado para cubrir el desembolso inicial de S/. {inversion_total_real:,.0f} mediante la operación neta.</div>""", unsafe_allow_html=True)
+            st.markdown(f"""<div class="info-text"><b>Análisis de Recuperación:</b> Tiempo estimado para cubrir el desembolso inicial de S/. {inversion_total_real:,.0f}.</div>""", unsafe_allow_html=True)
         
         fig_pb = go.Figure(); f_np = np.array(flujo_acum)
         fig_pb.add_trace(go.Scatter(x=meses_pb/12, y=np.where(f_np <= 0, f_np, 0), fill='tozeroy', fillcolor='rgba(239, 68, 68, 0.3)', line=dict(color='rgba(0,0,0,0)'), showlegend=False))
@@ -132,21 +129,21 @@ if check_password():
 
     # --- TAB 2: PLUSVALÍA ---
     with tab2:
-        st.markdown('<div class="section-title">Plusvalía: El Valor del Tiempo</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Plusvalía Anual</div>', unsafe_allow_html=True)
         plus_val = st.slider("Plusvalía Anual (%)", 0.0, 10.0, 4.0)
         c_p1, c_p2, c_p3, c_p4 = st.columns(4)
         c_p1.metric("A 5 años", f"S/. {(val_depa * (1 + plus_val/100)**5) - val_depa:,.0f}")
         c_p2.metric("A 10 años", f"S/. {(val_depa * (1 + plus_val/100)**10) - val_depa:,.0f}")
         c_p3.metric("A 15 años", f"S/. {(val_depa * (1 + plus_val/100)**15) - val_depa:,.0f}")
         c_p4.metric("A 20 años", f"S/. {(val_depa * (1 + plus_val/100)**20) - val_depa:,.0f}")
-        st.markdown('<div class="section-title">Evolución del Patrimonio (Equity)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Evolución del Patrimonio</div>', unsafe_allow_html=True)
         años_p = np.arange(0, 26); v_mkt = [val_depa * (1 + plus_val/100)**a for a in años_p]; eq = [v - (prestamo * (1 - a/plazo_años) if a < plazo_años else 0) for a, v in zip(años_p, v_mkt)]
         fig_p = go.Figure(); fig_p.add_trace(go.Bar(x=años_p, y=v_mkt, name="Valor Mercado", marker_color='#1f2630')); fig_p.add_trace(go.Scatter(x=años_p, y=eq, name="Equity", fill='tozeroy', line=dict(color='#00ffcc', width=3)))
         fig_p.update_layout(height=450, barmode='overlay', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white"); st.plotly_chart(fig_p, use_container_width=True)
 
     # --- TAB 3: SENSIBILIDAD ---
     with tab3:
-        st.markdown('<div class="section-title">Análisis de Resiliencia y Estrés</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Análisis de Resiliencia</div>', unsafe_allow_html=True)
         c_m1, c_m2, c_m3 = st.columns(3)
         c_m1.metric("Punto Equilibrio (Días)", f"{np.ceil(breakeven_dias):.0f}")
         c_m2.metric("Ocupación Objetivo", f"{ocupacion_act} días")
@@ -163,7 +160,7 @@ if check_password():
             st.plotly_chart(fig_o, use_container_width=True)
         st.markdown('<div class="info-text"><b>Impacto de Demanda:</b> Analiza cómo varía tu rentabilidad anual según el número de noches reservadas.</div>', unsafe_allow_html=True)
 
-        st.markdown('<div class="section-title">Sensibilidad: ROI vs Tarifa Diaria (ADR)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Sensibilidad: ROI vs Tarifa Diaria</div>', unsafe_allow_html=True)
         c_t1, c_t2 = st.columns([1, 2])
         t_range = list(range(int(tarifa*0.5), int(tarifa*1.5), 10)); roi_t = [((((t * ocupacion_act * 0.85 * 0.95) - cuota - mantenimiento_mes) * 12 / inversion_total_real) * 100) for t in t_range]
         with c_t1:
@@ -197,5 +194,8 @@ if check_password():
         )])
         fig_c.update_layout(height=450, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
         st.plotly_chart(fig_c, use_container_width=True)
+
+        # FICHA INFORMATIVA FINAL
+        st.markdown('<div class="info-text"><b>Ficha Informativa de Auditoría Comparativa:</b> Esta comparativa proyecta la utilidad neta después de obligaciones financieras (cuota), impositivas y operativas. Mientras que el modelo tradicional ofrece estabilidad contractual, el modelo Airbnb capitaliza la rotación de ocupación para optimizar el flujo de caja. <i>Nota: La rentabilidad final también debe considerar el factor de tiempo de gestión operativa de cada modelo.</i></div>', unsafe_allow_html=True)
 
     if st.button("✅ Finalizar Auditoría"): st.balloons()
