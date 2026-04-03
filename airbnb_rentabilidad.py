@@ -26,25 +26,25 @@ def check_password():
     return True
 
 if check_password():
-    # ESTILOS CSS (PROTEGIDOS)
+    # ESTILOS CSS REFINADOS (TÍTULOS MÁS SOBRIOS)
     st.markdown("""
         <style>
         .main { background-color: #0e1117; }
         [data-testid="stMetricValue"] { font-size: 1.8rem !important; color: #00ffcc; font-weight: bold; }
-        [data-testid="stMetricLabel"] { font-size: 1rem !important; font-weight: 600; color: #ffffff; }
+        [data-testid="stMetricLabel"] { font-size: 1rem !important; font-weight: 500; color: #ffffff; }
         div[data-testid="stMetric"] { 
             background-color: #1f2630; padding: 20px; border-radius: 12px; border: 1px solid #30363d; 
         }
         .info-text { 
             font-size: 0.9rem; color: #a1a1a1; margin-top: 10px; padding: 10px;
-            border-left: 3px solid #3b82f6; background-color: #161b22; line-height: 1.5; 
+            border-left: 2px solid #3b82f6; background-color: #161b22; line-height: 1.5; 
         }
         .section-title { 
-            margin-top: 30px; margin-bottom: 10px; color: #3b82f6; font-size: 1.5rem; 
-            font-weight: bold; text-transform: uppercase; letter-spacing: 1px;
+            margin-top: 35px; margin-bottom: 8px; color: #3b82f6; font-size: 1.45rem; 
+            font-weight: 400; letter-spacing: 0.5px; border-bottom: 1px solid #30363d; padding-bottom: 5px;
         }
         .highlight-card { 
-            background-color: #1e293b; padding: 25px; border-radius: 12px; border: 2px solid #3b82f6; 
+            background-color: #1e293b; padding: 25px; border-radius: 12px; border: 1px solid #3b82f6; 
             text-align: center; margin-bottom: 25px; 
         }
         .audit-note {
@@ -84,19 +84,19 @@ if check_password():
     # --- 4. TABS ---
     tab1, tab2, tab3, tab4 = st.tabs(["📊 Flujos", "📈 Plusvalía", "🛡️ Sensibilidad", "🔄 Airbnb vs Tradicional"])
 
-    # --- TAB 1 (CONGELADO SEGÚN V28) ---
+    # Pestaña 1 (Congelada)
     with tab1:
-        st.markdown('<div class="section-title">💰 Desembolso Inicial</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Desembolso Inicial</div>', unsafe_allow_html=True)
         st.metric("Inversión Total Real", f"S/. {inversion_total_real:,.0f}")
-        st.markdown('<div class="info-text">Capital total a desembolsar: Cuota inicial (20%) + Equipamiento/Amoblado necesario.</div>', unsafe_allow_html=True)
-        st.markdown('<div class="section-title">📉 Detalle de Flujo Mensual</div>', unsafe_allow_html=True)
+        st.markdown('<div class="info-text">Capital total a desembolsar (20% inicial + equipamiento).</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Detalle de Flujo Mensual</div>', unsafe_allow_html=True)
         df_flujo = pd.DataFrame({
-            "Concepto": ["(+) Ingresos Airbnb", "(-) Cuota Hipotecaria", "(-) Gastos Operativos", "(-) Impuestos (SUNAT)", "(=) FLUJO NETO"],
-            "Monto Mensual": [f"S/. {ingreso_bruto_air:,.2f}", f"S/. -{cuota:,.2f}", f"S/. -{mantenimiento_mes:,.2f}", f"S/. -{impuesto_air:,.2f}", f"S/. {flujo_neto_air:,.2f}"],
-            "Detalle Informativo": ["Neto tras comisión 15%.", "Costo financiero TCEA.", "Mantenimiento y servicios.", "Impuesto 1ra cat. (5%).", "Utilidad líquida."]
+            "Concepto": ["(+) Ingresos Airbnb", "(-) Cuota Hipotecaria", "(-) Gastos Operativos", "(-) Impuestos", "(=) FLUJO NETO"],
+            "Monto": [f"S/. {ingreso_bruto_air:,.2f}", f"S/. -{cuota:,.2f}", f"S/. -{mantenimiento_mes:,.2f}", f"S/. -{impuesto_air:,.2f}", f"S/. {flujo_neto_air:,.2f}"],
+            "Detalle": ["Neto plataforma.", "Costo TCEA.", "Mant. y servicios.", "Impuesto 5%.", "Utilidad líq."]
         })
         st.table(df_flujo)
-        st.markdown('<div class="section-title">📅 Proyección de Payback</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Proyección de Payback</div>', unsafe_allow_html=True)
         años_pb = 25; meses_pb = np.arange(0, años_pb * 12 + 1); flujo_acum = [-inversion_total_real]; año_rec = None
         for m in meses_pb[1:]:
             u_mes = flujo_neto_air if m <= (plazo_años * 12) else (ingreso_bruto_air - mantenimiento_mes - impuesto_air)
@@ -104,76 +104,68 @@ if check_password():
             if año_rec is None and flujo_acum[-1] >= 0: año_rec = m / 12
         if año_rec: st.markdown(f"""<div class="highlight-card"><span style="color: #3b82f6; font-size: 2.5rem; font-weight: bold;">{año_rec:.1f} Años</span></div>""", unsafe_allow_html=True)
         fig_pb = go.Figure(); f_np = np.array(flujo_acum)
-        fig_pb.add_trace(go.Scatter(x=meses_pb/12, y=np.where(f_np <= 0, f_np, 0), fill='tozeroy', fillcolor='rgba(239, 68, 68, 0.2)', line=dict(color='rgba(0,0,0,0)'), showlegend=False))
-        fig_pb.add_trace(go.Scatter(x=meses_pb/12, y=np.where(f_np >= 0, f_np, 0), fill='tozeroy', fillcolor='rgba(16, 185, 129, 0.2)', line=dict(color='rgba(0,0,0,0)'), showlegend=False))
-        fig_pb.add_trace(go.Scatter(x=meses_pb/12, y=flujo_acum, line=dict(color='#3b82f6', width=4)))
-        fig_pb.update_layout(height=600, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
-        st.plotly_chart(fig_pb, use_container_width=True)
+        fig_pb.add_trace(go.Scatter(x=meses_pb/12, y=np.where(f_np <= 0, f_np, 0), fill='tozeroy', fillcolor='rgba(239, 68, 68, 0.1)', line=dict(color='rgba(0,0,0,0)'), showlegend=False))
+        fig_pb.add_trace(go.Scatter(x=meses_pb/12, y=np.where(f_np >= 0, f_np, 0), fill='tozeroy', fillcolor='rgba(16, 185, 129, 0.1)', line=dict(color='rgba(0,0,0,0)'), showlegend=False))
+        fig_pb.add_trace(go.Scatter(x=meses_pb/12, y=flujo_acum, line=dict(color='#3b82f6', width=3)))
+        fig_pb.update_layout(height=600, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white"); st.plotly_chart(fig_pb, use_container_width=True)
 
-    # --- TAB 2: PLUSVALÍA (ENRIQUECIDO) ---
+    # Pestaña 2 (Plusvalía - Sobrio)
     with tab2:
-        st.markdown('<div class="section-title">📈 Plusvalía: El Poder del Tiempo</div>', unsafe_allow_html=True)
-        st.markdown('<div class="info-text"><b>Concepto:</b> La plusvalía es el incremento del valor del inmueble por factores externos (desarrollo urbano, inflación, demanda). Este cuadro estima cuánto dinero "ganas" solo por poseer el activo.</div>', unsafe_allow_html=True)
-        plus_val = st.slider("Tasa de Plusvalía Anual Estimada (%)", 0.0, 10.0, 4.0)
-        
-        col_p1, col_p2, col_p3, col_p4 = st.columns(4)
-        col_p1.metric("Ganancia a 5 años", f"S/. {(val_depa * (1 + plus_val/100)**5) - val_depa:,.0f}")
-        col_p2.metric("Ganancia a 10 años", f"S/. {(val_depa * (1 + plus_val/100)**10) - val_depa:,.0f}")
-        col_p3.metric("Ganancia a 15 años", f"S/. {(val_depa * (1 + plus_val/100)**15) - val_depa:,.0f}")
-        col_p4.metric("Ganancia a 20 años", f"S/. {(val_depa * (1 + plus_val/100)**20) - val_depa:,.0f}")
-        
-        st.markdown('<div class="section-title">📊 Composición del Patrimonio (Equity)</div>', unsafe_allow_html=True)
-        st.markdown('<div class="info-text"><b>Gráfico de Riqueza Real:</b> La barra gris es el valor de mercado. El área verde es tu <b>Equity</b>: la diferencia entre lo que vale el depa y lo que le debes al banco. Al año 20 (o fin del crédito), el área verde ocupa el 100% de la barra.</div>', unsafe_allow_html=True)
-        
-        años_p = np.arange(0, 26); v_mkt = [val_depa * (1 + plus_val/100)**a for a in años_p]
-        s_deuda = [prestamo * (1 - a/plazo_años) if a < plazo_años else 0 for a in años_p]
-        eq = [v - d for v, d in zip(v_mkt, s_deuda)]
-        
-        fig_p = go.Figure()
-        fig_p.add_trace(go.Bar(x=años_p, y=v_mkt, name="Valor de Mercado", marker_color='#1f2630'))
-        fig_p.add_trace(go.Scatter(x=años_p, y=eq, name="Equity (Tu Riqueza)", fill='tozeroy', line=dict(color='#00ffcc', width=3)))
-        fig_p.update_layout(height=450, barmode='overlay', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
-        st.plotly_chart(fig_p, use_container_width=True)
-        
-        st.markdown('<div class="audit-note"><b>📌 Nota de Auditoría (Plusvalía):</b> Históricamente en Lima Top/Moderna, la plusvalía oscila entre 3% y 5%. Un escenario conservador asegura que tu inversión supere la inflación.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Plusvalía: El Valor del Tiempo</div>', unsafe_allow_html=True)
+        st.markdown('<div class="info-text"><b>Ganancia por Valorización:</b> Incremento proyectado del valor comercial del inmueble independiente de los ingresos por renta.</div>', unsafe_allow_html=True)
+        plus_val = st.slider("Plusvalía Anual (%)", 0.0, 10.0, 4.0)
+        c_p1, c_p2, c_p3, c_p4 = st.columns(4)
+        c_p1.metric("A 5 años", f"S/. {(val_depa * (1 + plus_val/100)**5) - val_depa:,.0f}")
+        c_p2.metric("A 10 años", f"S/. {(val_depa * (1 + plus_val/100)**10) - val_depa:,.0f}")
+        c_p3.metric("A 15 años", f"S/. {(val_depa * (1 + plus_val/100)**15) - val_depa:,.0f}")
+        c_p4.metric("A 20 años", f"S/. {(val_depa * (1 + plus_val/100)**20) - val_depa:,.0f}")
+        st.markdown('<div class="section-title">Evolución del Patrimonio (Equity)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="info-text">Visualización de la riqueza neta (verde) generada por el pago de deuda y la apreciación del mercado.</div>', unsafe_allow_html=True)
+        años_p = np.arange(0, 26); v_mkt = [val_depa * (1 + plus_val/100)**a for a in años_p]; eq = [v - (prestamo * (1 - a/plazo_años) if a < plazo_años else 0) for a, v in zip(años_p, v_mkt)]
+        fig_p = go.Figure(); fig_p.add_trace(go.Bar(x=años_p, y=v_mkt, name="Valor Mercado", marker_color='#1f2630')); fig_p.add_trace(go.Scatter(x=años_p, y=eq, name="Equity", fill='tozeroy', line=dict(color='#00ffcc', width=3)))
+        fig_p.update_layout(height=450, barmode='overlay', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white"); st.plotly_chart(fig_p, use_container_width=True)
+        st.markdown('<div class="audit-note"><b>📌 Nota de Auditoría:</b> La plusvalía es la "ganancia silenciosa" que suele ser el mayor generador de patrimonio a largo plazo.</div>', unsafe_allow_html=True)
 
-    # --- TAB 3: SENSIBILIDAD (ENRIQUECIDO) ---
+    # Pestaña 3 (Sensibilidad - Sobrio)
     with tab3:
-        st.markdown('<div class="section-title">🛡️ Escenarios de Estrés y Resiliencia</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Análisis de Resiliencia y Estrés</div>', unsafe_allow_html=True)
         st.metric("Punto de Equilibrio Crítico", f"{np.ceil(breakeven_dias):.0f} días/mes")
-        st.markdown('<div class="info-text"><b>Métrica de Supervivencia:</b> Este es el número "mágico". Si alquilas menos de estos días, tendrás que poner dinero de tu bolsillo para pagar la cuota del banco.</div>', unsafe_allow_html=True)
-        
-        st.markdown('<div class="section-title">📉 1. ROI vs Ocupación Mensual</div>', unsafe_allow_html=True)
-        st.markdown('<div class="info-text"><b>Tabla y Gráfico:</b> Muestra cómo sube tu rentabilidad (ROI) por cada noche adicional ocupada. El color <b>Rojo</b> indica que no cubres gastos operativos; <b>Verde</b> es rentabilidad neta positiva.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="info-text">Días mínimos de ocupación necesarios para que el flujo neto sea S/ 0 (cubrir cuota y gastos).</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">ROI vs Ocupación Mensual</div>', unsafe_allow_html=True)
+        st.markdown('<div class="info-text">Variación del retorno anualizado según el volumen de demanda mensual.</div>', unsafe_allow_html=True)
         c_o1, c_o2 = st.columns([1, 2])
         d_range = list(range(5, 31)); roi_o = [((((tarifa * d * 0.85 * 0.95) - cuota - mantenimiento_mes) * 12 / inversion_total_real) * 100) for d in d_range]
         with c_o1:
             df_o = pd.DataFrame({"Días": [f"{d}d" for d in [10, 15, 20, 25, 30]], "ROI %": [roi_o[d_range.index(d)] for d in [10, 15, 20, 25, 30]]})
             st.dataframe(df_o.style.format({"ROI %": "{:.1f}%"}).background_gradient(cmap='RdYlGn', subset=["ROI %"]), height=212, use_container_width=True, hide_index=True)
         with c_o2:
-            fig_o = go.Figure(go.Scatter(x=d_range, y=roi_o, line=dict(color='#3b82f6', width=3))); fig_o.add_hline(y=0, line_dash="dot", line_color="red")
-            fig_o.update_layout(height=400, margin=dict(t=10, b=10), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white"); st.plotly_chart(fig_o, use_container_width=True)
-
-        st.markdown('<div class="section-title">📈 2. ROI vs Tarifa Diaria (ADR)</div>', unsafe_allow_html=True)
-        st.markdown('<div class="info-text"><b>Sensibilidad de Precio:</b> Evalúa qué pasa si la competencia te obliga a bajar precios o si en temporada alta puedes subirlos. Una variación de S/ 20 puede cambiar tu ROI en varios puntos porcentuales.</div>', unsafe_allow_html=True)
+            fig_o = go.Figure(go.Scatter(x=d_range, y=roi_o, line=dict(color='#3b82f6', width=3))); fig_o.update_layout(height=400, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white"); st.plotly_chart(fig_o, use_container_width=True)
+        st.markdown('<div class="section-title">ROI vs Tarifa Diaria</div>', unsafe_allow_html=True)
+        st.markdown('<div class="info-text">Sensibilidad del rendimiento ante ajustes en el precio por noche (competencia o temporada).</div>', unsafe_allow_html=True)
         c_t1, c_t2 = st.columns([1, 2])
         t_range = list(range(int(tarifa*0.5), int(tarifa*1.5), 10)); roi_t = [((((t * ocupacion_act * 0.85 * 0.95) - cuota - mantenimiento_mes) * 12 / inversion_total_real) * 100) for t in t_range]
         with c_t1:
             df_t = pd.DataFrame({"Tarifa": [f"S/ {t}" for t in t_range[::2]], "ROI %": roi_t[::2]})
             st.dataframe(df_t.style.format({"ROI %": "{:.1f}%"}).background_gradient(cmap='RdYlGn', subset=["ROI %"]), height=400, use_container_width=True, hide_index=True)
         with c_t2:
-            fig_t = go.Figure(go.Scatter(x=t_range, y=roi_t, line=dict(color='#00ffcc', width=3))); fig_t.add_hline(y=0, line_dash="dot", line_color="red")
-            fig_t.update_layout(height=400, margin=dict(t=10, b=10), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white"); st.plotly_chart(fig_t, use_container_width=True)
-        
-        st.markdown('<div class="audit-note"><b>📌 Nota de Auditoría (Riesgos):</b> Se recomienda mantener un fondo de reserva equivalente a 3 cuotas hipotecarias para cubrir meses de baja ocupación atípica o mantenimiento mayor.</div>', unsafe_allow_html=True)
+            fig_t = go.Figure(go.Scatter(x=t_range, y=roi_t, line=dict(color='#00ffcc', width=3))); fig_t.update_layout(height=400, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white"); st.plotly_chart(fig_t, use_container_width=True)
+        st.markdown('<div class="audit-note"><b>📌 Nota de Auditoría:</b> Mantener tarifas dinámicas optimiza el ROI en temporadas de baja demanda.</div>', unsafe_allow_html=True)
 
-    # --- TAB 4 (CONGELADO) ---
+    # Pestaña 4 (Airbnb vs Tradicional - ENRIQUECIDO)
     with tab4:
-        st.markdown('<div class="section-title">🔄 Airbnb vs Tradicional</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Comparativa de Modelos de Renta</div>', unsafe_allow_html=True)
+        st.markdown('<div class="info-text"><b>Objetivo:</b> Analizar si el esfuerzo operativo de Airbnb justifica la diferencia económica frente a un contrato tradicional de 12 meses.</div>', unsafe_allow_html=True)
+        
         c_comp1, c_comp2 = st.columns(2)
         c_comp1.metric("Ventaja Airbnb (Anual)", f"S/. {(flujo_neto_air*12) - u_anual_trad:,.0f}")
-        c_comp2.metric("Eficiencia", f"{(roi_anual_air/((u_anual_trad/inversion_total_real)*100)):.1f}x")
+        c_comp2.metric("Factor de Eficiencia", f"{(roi_anual_air/((u_anual_trad/inversion_total_real)*100)):.1f}x")
+        st.markdown('<div class="info-text"><b>Métricas Clave:</b> La ventaja anual es la ganancia extra en soles. La eficiencia indica cuántas veces más rentable es el modelo de renta corta.</div>', unsafe_allow_html=True)
+        
+        st.markdown('<div class="section-title">Utilidad Neta Anualizada</div>', unsafe_allow_html=True)
+        st.markdown('<div class="info-text">Gráfico comparativo de beneficios líquidos anuales tras descontar todos los gastos operativos e hipotecarios.</div>', unsafe_allow_html=True)
         fig_c = go.Figure([go.Bar(x=['Airbnb', 'Tradicional'], y=[flujo_neto_air*12, u_anual_trad], marker_color=['#3b82f6', '#10b981'], text=[f"S/. {flujo_neto_air*12:,.0f}", f"S/. {u_anual_trad:,.0f}"], textposition='inside')])
         fig_c.update_layout(height=400, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white"); st.plotly_chart(fig_c, use_container_width=True)
+        
+        st.markdown('<div class="audit-note"><b>📌 Conclusión de Auditoría:</b> Si el factor de eficiencia es mayor a 1.3x, el modelo Airbnb suele ser preferible incluso considerando los gastos de limpieza y gestión.</div>', unsafe_allow_html=True)
 
     if st.button("✅ Finalizar Auditoría"): st.balloons()
