@@ -26,44 +26,29 @@ def check_password():
     return True
 
 if check_password():
-    # ESTILOS CSS (CONSERVADOS Y PROTEGIDOS)
+    # ESTILOS CSS (PROTEGIDOS)
     st.markdown("""
         <style>
         .main { background-color: #0e1117; }
         [data-testid="stMetricValue"] { font-size: 1.8rem !important; color: #00ffcc; font-weight: bold; }
         [data-testid="stMetricLabel"] { font-size: 1rem !important; font-weight: 600; color: #ffffff; }
         div[data-testid="stMetric"] { 
-            background-color: #1f2630; 
-            padding: 20px; 
-            border-radius: 12px; 
-            border: 1px solid #30363d; 
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            background-color: #1f2630; padding: 20px; border-radius: 12px; border: 1px solid #30363d; 
         }
         .info-text { 
-            font-size: 0.9rem; 
-            color: #a1a1a1; 
-            margin-top: 10px; 
-            padding: 10px;
-            border-left: 3px solid #3b82f6;
-            background-color: #161b22;
-            line-height: 1.5; 
+            font-size: 0.9rem; color: #a1a1a1; margin-top: 10px; padding: 10px;
+            border-left: 3px solid #3b82f6; background-color: #161b22; line-height: 1.5; 
         }
         .section-title { 
-            margin-top: 30px; 
-            margin-bottom: 10px; 
-            color: #3b82f6; 
-            font-size: 1.5rem; 
-            font-weight: bold; 
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            margin-top: 30px; margin-bottom: 10px; color: #3b82f6; font-size: 1.5rem; 
+            font-weight: bold; text-transform: uppercase; letter-spacing: 1px;
         }
         .highlight-card { 
-            background-color: #1e293b; 
-            padding: 25px; 
-            border-radius: 12px; 
-            border: 2px solid #3b82f6; 
-            text-align: center; 
-            margin-bottom: 25px; 
+            background-color: #1e293b; padding: 25px; border-radius: 12px; border: 2px solid #3b82f6; 
+            text-align: center; margin-bottom: 25px; 
+        }
+        .audit-note {
+            background-color: #1c1c1c; padding: 15px; border: 1px dashed #3b82f6; border-radius: 8px; margin-top: 20px;
         }
         </style>
         """, unsafe_allow_html=True)
@@ -88,12 +73,10 @@ if check_password():
     prestamo = val_depa - inicial_banco
     tem = (1 + tcea/100)**(1/12) - 1
     cuota = prestamo * (tem * (1 + tem)**(plazo_años*12)) / ((1 + tem)**(plazo_años*12) - 1)
-    
     mantenimiento_mes = (val_depa * 0.03) / 12
     ingreso_bruto_air = tarifa * ocupacion_act * 0.85
     impuesto_air = ingreso_bruto_air * 0.05
     flujo_neto_air = ingreso_bruto_air - cuota - mantenimiento_mes - impuesto_air
-    
     roi_anual_air = (flujo_neto_air * 12 / inversion_total_real) * 100
     breakeven_dias = (cuota + mantenimiento_mes) / (tarifa * 0.85 * 0.95)
     u_anual_trad = (renta_trad - cuota - (val_depa*0.015/12) - (renta_trad*0.05)) * 12
@@ -101,81 +84,91 @@ if check_password():
     # --- 4. TABS ---
     tab1, tab2, tab3, tab4 = st.tabs(["📊 Flujos", "📈 Plusvalía", "🛡️ Sensibilidad", "🔄 Airbnb vs Tradicional"])
 
+    # --- TAB 1 (CONGELADO SEGÚN V28) ---
     with tab1:
         st.markdown('<div class="section-title">💰 Desembolso Inicial</div>', unsafe_allow_html=True)
         st.metric("Inversión Total Real", f"S/. {inversion_total_real:,.0f}")
-        st.markdown('<div class="info-text">Capital total a desembolsar: Cuota inicial (20%) + Equipamiento/Amoblado necesario para el inicio de operaciones.</div>', unsafe_allow_html=True)
-        
+        st.markdown('<div class="info-text">Capital total a desembolsar: Cuota inicial (20%) + Equipamiento/Amoblado necesario.</div>', unsafe_allow_html=True)
         st.markdown('<div class="section-title">📉 Detalle de Flujo Mensual</div>', unsafe_allow_html=True)
-        # CUADRO CON DATOS INFORMATIVOS EXTRA
         df_flujo = pd.DataFrame({
             "Concepto": ["(+) Ingresos Airbnb", "(-) Cuota Hipotecaria", "(-) Gastos Operativos", "(-) Impuestos (SUNAT)", "(=) FLUJO NETO"],
             "Monto Mensual": [f"S/. {ingreso_bruto_air:,.2f}", f"S/. -{cuota:,.2f}", f"S/. -{mantenimiento_mes:,.2f}", f"S/. -{impuesto_air:,.2f}", f"S/. {flujo_neto_air:,.2f}"],
-            "Detalle Informativo": [
-                "Estimado neto tras comisión de plataforma (15%).",
-                "Costo financiero del préstamo hipotecario (TCEA).",
-                "Mantenimiento del edificio, servicios y limpieza.",
-                "Impuesto a la renta de primera categoría (5%).",
-                "Utilidad líquida mensual después de obligaciones."
-            ]
+            "Detalle Informativo": ["Neto tras comisión 15%.", "Costo financiero TCEA.", "Mantenimiento y servicios.", "Impuesto 1ra cat. (5%).", "Utilidad líquida."]
         })
         st.table(df_flujo)
-        
-        st.markdown('<div class="section-title">📅 Proyección de Payback (Recuperación)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">📅 Proyección de Payback</div>', unsafe_allow_html=True)
         años_pb = 25; meses_pb = np.arange(0, años_pb * 12 + 1); flujo_acum = [-inversion_total_real]; año_rec = None
         for m in meses_pb[1:]:
             u_mes = flujo_neto_air if m <= (plazo_años * 12) else (ingreso_bruto_air - mantenimiento_mes - impuesto_air)
             flujo_acum.append(flujo_acum[-1] + u_mes)
             if año_rec is None and flujo_acum[-1] >= 0: año_rec = m / 12
-        
-        if año_rec: 
-            st.markdown(f"""<div class="highlight-card"><div style="color:#ffffff; font-size:1rem; margin-bottom:5px;">Punto de Equilibrio de Inversión:</div><span style="color: #3b82f6; font-size: 2.5rem; font-weight: bold;">{año_rec:.1f} Años</span></div>""", unsafe_allow_html=True)
-        
-        # GRÁFICO CON ALTURA AUMENTADA A 600
-        fig_pb = go.Figure()
-        f_np = np.array(flujo_acum)
+        if año_rec: st.markdown(f"""<div class="highlight-card"><span style="color: #3b82f6; font-size: 2.5rem; font-weight: bold;">{año_rec:.1f} Años</span></div>""", unsafe_allow_html=True)
+        fig_pb = go.Figure(); f_np = np.array(flujo_acum)
         fig_pb.add_trace(go.Scatter(x=meses_pb/12, y=np.where(f_np <= 0, f_np, 0), fill='tozeroy', fillcolor='rgba(239, 68, 68, 0.2)', line=dict(color='rgba(0,0,0,0)'), showlegend=False))
         fig_pb.add_trace(go.Scatter(x=meses_pb/12, y=np.where(f_np >= 0, f_np, 0), fill='tozeroy', fillcolor='rgba(16, 185, 129, 0.2)', line=dict(color='rgba(0,0,0,0)'), showlegend=False))
-        fig_pb.add_trace(go.Scatter(x=meses_pb/12, y=flujo_acum, line=dict(color='#3b82f6', width=4), name="Flujo Acumulado"))
-        fig_pb.add_hline(y=0, line_dash="dash", line_color="white")
-        fig_pb.update_layout(height=600, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white", xaxis_title="Años en Operación", yaxis_title="Saldo de Inversión Acumulado (S/.)")
+        fig_pb.add_trace(go.Scatter(x=meses_pb/12, y=flujo_acum, line=dict(color='#3b82f6', width=4)))
+        fig_pb.update_layout(height=600, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
         st.plotly_chart(fig_pb, use_container_width=True)
 
-    with tab2: # CONSERVADO
-        st.markdown('<div class="section-title">📈 Plusvalía: El Valor del Tiempo</div>', unsafe_allow_html=True)
+    # --- TAB 2: PLUSVALÍA (ENRIQUECIDO) ---
+    with tab2:
+        st.markdown('<div class="section-title">📈 Plusvalía: El Poder del Tiempo</div>', unsafe_allow_html=True)
+        st.markdown('<div class="info-text"><b>Concepto:</b> La plusvalía es el incremento del valor del inmueble por factores externos (desarrollo urbano, inflación, demanda). Este cuadro estima cuánto dinero "ganas" solo por poseer el activo.</div>', unsafe_allow_html=True)
         plus_val = st.slider("Tasa de Plusvalía Anual Estimada (%)", 0.0, 10.0, 4.0)
+        
         col_p1, col_p2, col_p3, col_p4 = st.columns(4)
-        col_p1.metric("Plusvalía 5 años", f"S/. {(val_depa * (1 + plus_val/100)**5) - val_depa:,.0f}")
-        col_p2.metric("Plusvalía 10 años", f"S/. {(val_depa * (1 + plus_val/100)**10) - val_depa:,.0f}")
-        col_p3.metric("Plusvalía 15 años", f"S/. {(val_depa * (1 + plus_val/100)**15) - val_depa:,.0f}")
-        col_p4.metric("Plusvalía 20 años", f"S/. {(val_depa * (1 + plus_val/100)**20) - val_depa:,.0f}")
+        col_p1.metric("Ganancia a 5 años", f"S/. {(val_depa * (1 + plus_val/100)**5) - val_depa:,.0f}")
+        col_p2.metric("Ganancia a 10 años", f"S/. {(val_depa * (1 + plus_val/100)**10) - val_depa:,.0f}")
+        col_p3.metric("Ganancia a 15 años", f"S/. {(val_depa * (1 + plus_val/100)**15) - val_depa:,.0f}")
+        col_p4.metric("Ganancia a 20 años", f"S/. {(val_depa * (1 + plus_val/100)**20) - val_depa:,.0f}")
+        
+        st.markdown('<div class="section-title">📊 Composición del Patrimonio (Equity)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="info-text"><b>Gráfico de Riqueza Real:</b> La barra gris es el valor de mercado. El área verde es tu <b>Equity</b>: la diferencia entre lo que vale el depa y lo que le debes al banco. Al año 20 (o fin del crédito), el área verde ocupa el 100% de la barra.</div>', unsafe_allow_html=True)
+        
         años_p = np.arange(0, 26); v_mkt = [val_depa * (1 + plus_val/100)**a for a in años_p]
         s_deuda = [prestamo * (1 - a/plazo_años) if a < plazo_años else 0 for a in años_p]
         eq = [v - d for v, d in zip(v_mkt, s_deuda)]
-        fig_p = go.Figure(); fig_p.add_trace(go.Bar(x=años_p, y=v_mkt, name="Valor Mercado", marker_color='#1f2630')); fig_p.add_trace(go.Scatter(x=años_p, y=eq, name="Equity", fill='tozeroy', line=dict(color='#00ffcc', width=3)))
-        fig_p.update_layout(height=450, barmode='overlay', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white"); st.plotly_chart(fig_p, use_container_width=True)
+        
+        fig_p = go.Figure()
+        fig_p.add_trace(go.Bar(x=años_p, y=v_mkt, name="Valor de Mercado", marker_color='#1f2630'))
+        fig_p.add_trace(go.Scatter(x=años_p, y=eq, name="Equity (Tu Riqueza)", fill='tozeroy', line=dict(color='#00ffcc', width=3)))
+        fig_p.update_layout(height=450, barmode='overlay', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
+        st.plotly_chart(fig_p, use_container_width=True)
+        
+        st.markdown('<div class="audit-note"><b>📌 Nota de Auditoría (Plusvalía):</b> Históricamente en Lima Top/Moderna, la plusvalía oscila entre 3% y 5%. Un escenario conservador asegura que tu inversión supere la inflación.</div>', unsafe_allow_html=True)
 
-    with tab3: # CONSERVADO (SEMÁFORO Y ALTURAS)
-        st.markdown('<div class="section-title">🛡️ Escenarios de Estrés</div>', unsafe_allow_html=True)
+    # --- TAB 3: SENSIBILIDAD (ENRIQUECIDO) ---
+    with tab3:
+        st.markdown('<div class="section-title">🛡️ Escenarios de Estrés y Resiliencia</div>', unsafe_allow_html=True)
         st.metric("Punto de Equilibrio Crítico", f"{np.ceil(breakeven_dias):.0f} días/mes")
-        st.markdown('<div class="section-title">📉 1. ROI vs Días de Ocupación</div>', unsafe_allow_html=True)
+        st.markdown('<div class="info-text"><b>Métrica de Supervivencia:</b> Este es el número "mágico". Si alquilas menos de estos días, tendrás que poner dinero de tu bolsillo para pagar la cuota del banco.</div>', unsafe_allow_html=True)
+        
+        st.markdown('<div class="section-title">📉 1. ROI vs Ocupación Mensual</div>', unsafe_allow_html=True)
+        st.markdown('<div class="info-text"><b>Tabla y Gráfico:</b> Muestra cómo sube tu rentabilidad (ROI) por cada noche adicional ocupada. El color <b>Rojo</b> indica que no cubres gastos operativos; <b>Verde</b> es rentabilidad neta positiva.</div>', unsafe_allow_html=True)
         c_o1, c_o2 = st.columns([1, 2])
         d_range = list(range(5, 31)); roi_o = [((((tarifa * d * 0.85 * 0.95) - cuota - mantenimiento_mes) * 12 / inversion_total_real) * 100) for d in d_range]
         with c_o1:
             df_o = pd.DataFrame({"Días": [f"{d}d" for d in [10, 15, 20, 25, 30]], "ROI %": [roi_o[d_range.index(d)] for d in [10, 15, 20, 25, 30]]})
             st.dataframe(df_o.style.format({"ROI %": "{:.1f}%"}).background_gradient(cmap='RdYlGn', subset=["ROI %"]), height=212, use_container_width=True, hide_index=True)
         with c_o2:
-            fig_o = go.Figure(go.Scatter(x=d_range, y=roi_o, line=dict(color='#3b82f6', width=3))); fig_o.update_layout(height=400, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white"); st.plotly_chart(fig_o, use_container_width=True)
-        st.markdown('<div class="section-title">📈 2. ROI vs Tarifa Diaria</div>', unsafe_allow_html=True)
+            fig_o = go.Figure(go.Scatter(x=d_range, y=roi_o, line=dict(color='#3b82f6', width=3))); fig_o.add_hline(y=0, line_dash="dot", line_color="red")
+            fig_o.update_layout(height=400, margin=dict(t=10, b=10), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white"); st.plotly_chart(fig_o, use_container_width=True)
+
+        st.markdown('<div class="section-title">📈 2. ROI vs Tarifa Diaria (ADR)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="info-text"><b>Sensibilidad de Precio:</b> Evalúa qué pasa si la competencia te obliga a bajar precios o si en temporada alta puedes subirlos. Una variación de S/ 20 puede cambiar tu ROI en varios puntos porcentuales.</div>', unsafe_allow_html=True)
         c_t1, c_t2 = st.columns([1, 2])
         t_range = list(range(int(tarifa*0.5), int(tarifa*1.5), 10)); roi_t = [((((t * ocupacion_act * 0.85 * 0.95) - cuota - mantenimiento_mes) * 12 / inversion_total_real) * 100) for t in t_range]
         with c_t1:
             df_t = pd.DataFrame({"Tarifa": [f"S/ {t}" for t in t_range[::2]], "ROI %": roi_t[::2]})
             st.dataframe(df_t.style.format({"ROI %": "{:.1f}%"}).background_gradient(cmap='RdYlGn', subset=["ROI %"]), height=400, use_container_width=True, hide_index=True)
         with c_t2:
-            fig_t = go.Figure(go.Scatter(x=t_range, y=roi_t, line=dict(color='#00ffcc', width=3))); fig_t.update_layout(height=400, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white"); st.plotly_chart(fig_t, use_container_width=True)
+            fig_t = go.Figure(go.Scatter(x=t_range, y=roi_t, line=dict(color='#00ffcc', width=3))); fig_t.add_hline(y=0, line_dash="dot", line_color="red")
+            fig_t.update_layout(height=400, margin=dict(t=10, b=10), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white"); st.plotly_chart(fig_t, use_container_width=True)
+        
+        st.markdown('<div class="audit-note"><b>📌 Nota de Auditoría (Riesgos):</b> Se recomienda mantener un fondo de reserva equivalente a 3 cuotas hipotecarias para cubrir meses de baja ocupación atípica o mantenimiento mayor.</div>', unsafe_allow_html=True)
 
-    with tab4: # CONSERVADO
+    # --- TAB 4 (CONGELADO) ---
+    with tab4:
         st.markdown('<div class="section-title">🔄 Airbnb vs Tradicional</div>', unsafe_allow_html=True)
         c_comp1, c_comp2 = st.columns(2)
         c_comp1.metric("Ventaja Airbnb (Anual)", f"S/. {(flujo_neto_air*12) - u_anual_trad:,.0f}")
