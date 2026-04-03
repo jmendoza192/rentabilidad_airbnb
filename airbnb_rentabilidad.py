@@ -5,7 +5,10 @@ import plotly.graph_objects as go
 from fpdf import FPDF
 from datetime import datetime
 
-# --- 1. CONFIGURACIÓN Y SEGURIDAD (V37 ORIGINAL) ---
+# =========================================================
+# BLOQUE 1: INTERFAZ WEB V37 (PROHIBIDO TOCAR)
+# =========================================================
+
 try:
     st.set_page_config(page_title="Auditoría Pro | Jancarlo Mendoza", layout="wide")
 except:
@@ -27,67 +30,24 @@ def check_password():
         return False
     return True
 
-# --- 2. FUNCIÓN GENERADORA DE PDF (ENCAPSULADA - NO TOCA LA WEB) ---
-def generate_pdf(d):
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", 'B', 16)
-    pdf.cell(200, 10, "REPORTE ESTRATEGICO DE AUDITORIA INMOBILIARIA", ln=True, align='C')
-    pdf.set_font("Arial", 'I', 10)
-    pdf.cell(200, 8, f"Consultor: Ing. Jancarlo Mendoza", ln=True, align='C')
-    pdf.cell(200, 8, f"Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M')}", ln=True, align='C')
-    pdf.line(10, 38, 200, 38)
-    pdf.ln(12)
-
-    pdf.set_font("Arial", 'B', 12); pdf.cell(0, 10, "1. RESUMEN DE INVERSION Y FLUJOS", ln=True)
-    pdf.set_font("Arial", '', 10)
-    pdf.multi_cell(0, 6, f"- Inversion Total Real: S/. {d['inv_total']:,.2f}\n"
-                         f"- Ingreso Bruto (Airbnb): S/. {d['ing_bruto']:,.2f}\n"
-                         f"- Cuota Hipotecaria: S/. {d['cuota']:,.2f}\n"
-                         f"- Utilidad Liquida Mensual: S/. {d['flujo_neto']:,.2f}\n"
-                         f"- Tiempo de Payback: {d['payback']:.1f} años.")
-    pdf.ln(5)
-
-    pdf.set_font("Arial", 'B', 12); pdf.cell(0, 10, "2. VALORIZACION Y COMPARATIVA", ln=True)
-    pdf.set_font("Arial", '', 10)
-    pdf.multi_cell(0, 6, f"- Plusvalia Proyectada (20 años): S/. {d['plus_20']:,.2f}\n"
-                         f"- ROI Anual: {d['roi']:.2f}%\n"
-                         f"- Diferencial vs Renta Tradicional: S/. {d['ventaja']:,.2f} anuales.")
-    
-    return pdf.output(dest='S').encode('latin-1')
-
 if check_password():
-    # --- 3. ESTILOS CSS (RESTAURACIÓN FORENSE V37) ---
+    # --- ESTILOS CSS V37 ---
     st.markdown("""
         <style>
         .main { background-color: #0e1117; }
         [data-testid="stMetricValue"] { font-size: 1.8rem !important; color: #00ffcc; font-weight: bold; }
         [data-testid="stMetricLabel"] { font-size: 1rem !important; font-weight: 500; color: #ffffff; }
-        div[data-testid="stMetric"] { 
-            background-color: #1f2630; padding: 20px; border-radius: 12px; border: 1px solid #30363d; 
-        }
-        .info-text { 
-            font-size: 0.9rem; color: #a1a1a1; margin-top: 10px; padding: 12px;
-            border-left: 2px solid #3b82f6; background-color: #161b22; line-height: 1.5; 
-        }
-        .section-title { 
-            margin-top: 35px; margin-bottom: 12px; color: #3b82f6; font-size: 1.45rem; 
-            font-weight: 400; letter-spacing: 0.5px; border-bottom: 1px solid #30363d; padding-bottom: 5px;
-        }
-        .highlight-card { 
-            background-color: #1e293b; padding: 25px; border-radius: 12px; border: 1px solid #3b82f6; 
-            text-align: center; margin-bottom: 10px; 
-        }
-        .flow-card {
-            background-color: #161b22; padding: 15px; border-radius: 10px; border: 1px solid #30363d;
-            height: 100%; margin-bottom: 10px;
-        }
+        div[data-testid="stMetric"] { background-color: #1f2630; padding: 20px; border-radius: 12px; border: 1px solid #30363d; }
+        .info-text { font-size: 0.9rem; color: #a1a1a1; margin-top: 10px; padding: 12px; border-left: 2px solid #3b82f6; background-color: #161b22; line-height: 1.5; }
+        .section-title { margin-top: 35px; margin-bottom: 12px; color: #3b82f6; font-size: 1.45rem; font-weight: 400; border-bottom: 1px solid #30363d; padding-bottom: 5px; }
+        .highlight-card { background-color: #1e293b; padding: 25px; border-radius: 12px; border: 1px solid #3b82f6; text-align: center; margin-bottom: 10px; }
+        .flow-card { background-color: #161b22; padding: 15px; border-radius: 10px; border: 1px solid #30363d; height: 100%; margin-bottom: 10px; }
         .flow-val { font-size: 1.3rem; font-weight: bold; margin-bottom: 5px; }
         .flow-label { font-size: 0.85rem; color: #3b82f6; text-transform: uppercase; font-weight: 600; }
         </style>
         """, unsafe_allow_html=True)
 
-    # --- 4. SIDEBAR (V37) ---
+    # --- SIDEBAR V37 ---
     with st.sidebar:
         st.header("⚙️ Parámetros")
         val_depa = st.number_input("Precio Inmueble (S/.)", value=250000)
@@ -101,7 +61,7 @@ if check_password():
         st.write("---")
         renta_trad = st.number_input("Renta Tradicional (S/.)", value=1800)
 
-    # --- 5. LÓGICA DE CÁLCULO ---
+    # --- LÓGICA V37 ---
     inicial_banco = val_depa * 0.20
     inversion_total_real = inicial_banco + inv_amoblado
     prestamo = val_depa - inicial_banco
@@ -115,7 +75,7 @@ if check_password():
     breakeven_dias = (cuota + mantenimiento_mes) / (tarifa * 0.85 * 0.95)
     u_anual_trad = (renta_trad - cuota - (val_depa*0.015/12) - (renta_trad*0.05)) * 12
 
-    # --- 6. TABS (BLOQUEADOS V37 - NO TOCAR NADA) ---
+    # --- TABS V37 (DISPOSICIÓN EXACTA) ---
     tab1, tab2, tab3, tab4 = st.tabs(["📊 Flujos", "📈 Plusvalía", "🛡️ Sensibilidad", "🔄 Airbnb vs Tradicional"])
 
     with tab1:
@@ -149,7 +109,7 @@ if check_password():
         fig_pb.add_trace(go.Scatter(x=meses_pb/12, y=np.where(f_np <= 0, f_np, 0), fill='tozeroy', fillcolor='rgba(239, 68, 68, 0.3)', line=dict(color='rgba(0,0,0,0)'), showlegend=False))
         fig_pb.add_trace(go.Scatter(x=meses_pb/12, y=np.where(f_np >= 0, f_np, 0), fill='tozeroy', fillcolor='rgba(16, 185, 129, 0.3)', line=dict(color='rgba(0,0,0,0)'), showlegend=False))
         fig_pb.add_trace(go.Scatter(x=meses_pb/12, y=flujo_acum, line=dict(color='#3b82f6', width=4), name="Flujo Acumulado"))
-        fig_pb.update_layout(title="Curva de Retorno (S/. Acumulados)", height=500, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white", xaxis_title="Años")
+        fig_pb.update_layout(height=500, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white", xaxis_title="Años")
         st.plotly_chart(fig_pb, use_container_width=True)
 
     with tab2:
@@ -189,13 +149,33 @@ if check_password():
         st.plotly_chart(fig_c, use_container_width=True)
         st.markdown('<div class="info-text"><b>Ficha Informativa Final:</b> Esta comparativa proyecta la utilidad neta después de obligaciones.</div>', unsafe_allow_html=True)
 
-    # --- 7. BOTÓN DE EXPORTACIÓN (ÚNICA ADICIÓN FUERA DE V37) ---
+# =========================================================
+# BLOQUE 2: MOTOR DE PDF (AISLADO AL FINAL)
+# =========================================================
+
+def generate_pdf_engine(data):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", 'B', 16)
+    pdf.cell(200, 10, "AUDITORIA TECNICA INMOBILIARIA", ln=True, align='C')
+    pdf.set_font("Arial", 'I', 10)
+    pdf.cell(200, 8, "Ing. Jancarlo Mendoza - Real Estate Expert", ln=True, align='C')
+    pdf.line(10, 35, 200, 35); pdf.ln(15)
+    
+    pdf.set_font("Arial", 'B', 12); pdf.cell(0, 10, "RESUMEN DE RESULTADOS", ln=True)
+    pdf.set_font("Arial", '', 10)
+    pdf.cell(0, 7, f"- Inversion Capital: S/. {data['inv']:,.2f}", ln=True)
+    pdf.cell(0, 7, f"- Flujo Neto/Mes: S/. {data['flujo']:,.2f}", ln=True)
+    pdf.cell(0, 7, f"- ROI Anual: {data['roi']:.2f}%", ln=True)
+    pdf.cell(0, 7, f"- Ventaja vs Tradicional: S/. {data['ventaja']:,.2f}", ln=True)
+    return pdf.output(dest='S').encode('latin-1')
+
+# --- BOTÓN DE EXPORTACIÓN (FUERA DE LOS TABS) ---
+if "authenticated" in st.session_state and st.session_state.authenticated:
     st.write("---")
-    report_data = {
-        "inv_total": inversion_total_real, "ing_bruto": ingreso_bruto_air, "cuota": cuota,
-        "flujo_neto": flujo_neto_air, "payback": año_rec if año_rec else 0, "val_orig": val_depa,
-        "plus_20": p_20, "roi": roi_anual_air, "ventaja": ventaja_anual
-    }
-    if st.button("📥 Generar Reporte PDF"):
-        pdf_bytes = generate_pdf(report_data)
-        st.download_button(label="Descargar Auditoría", data=pdf_bytes, file_name="auditoria.pdf", mime="application/pdf")
+    if st.button("📥 EXPORTAR INFORME PDF"):
+        pdf_content = generate_pdf_engine({
+            "inv": inversion_total_real, "flujo": flujo_neto_air, 
+            "roi": roi_anual_air, "ventaja": ventaja_anual
+        })
+        st.download_button("Descargar Archivo", data=pdf_content, file_name="auditoria_v46.pdf")
