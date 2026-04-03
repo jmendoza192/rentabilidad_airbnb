@@ -4,7 +4,6 @@ import numpy as np
 import plotly.graph_objects as go
 from fpdf import FPDF
 from datetime import datetime
-import base64
 
 # --- 1. CONFIGURACIÓN Y SEGURIDAD ---
 try:
@@ -28,64 +27,67 @@ def check_password():
         return False
     return True
 
-# --- FUNCIÓN GENERADORA DE PDF ---
-def generate_pdf(data_dict):
+# --- FUNCIÓN GENERADORA DE PDF (MEJORADA CON TIPS Y 80% DATA) ---
+def generate_pdf(d):
     pdf = FPDF()
     pdf.add_page()
     
-    # Encabezado
+    # Encabezado Profesional
     pdf.set_font("Arial", 'B', 16)
-    pdf.cell(200, 10, "REPORTE DE AUDITORÍA INMOBILIARIA", ln=True, align='C')
+    pdf.cell(200, 10, "REPORTE ESTRATÉGICO DE INVERSIÓN INMOBILIARIA", ln=True, align='C')
     pdf.set_font("Arial", 'I', 10)
-    pdf.cell(200, 10, f"Realizado por: Ing. Jancarlo Mendoza - Asesoría Inmobiliaria", ln=True, align='C')
-    pdf.cell(200, 10, f"Fecha y Hora de Exportación: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}", ln=True, align='C')
-    pdf.line(10, 35, 200, 35)
-    
-    # Sección 1: Flujos
-    pdf.ln(10)
+    pdf.cell(200, 8, f"Realizado por: Ing. Jancarlo Mendoza - Asesoría Inmobiliaria", ln=True, align='C')
+    pdf.cell(200, 8, f"Exportado el: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}", ln=True, align='C')
+    pdf.line(10, 38, 200, 38)
+    pdf.ln(12)
+
+    # Bloque 1: Flujos (Pestaña 1)
     pdf.set_font("Arial", 'B', 12)
-    pdf.cell(200, 10, "1. RESUMEN DE FLUJOS Y RETORNO", ln=True)
+    pdf.cell(0, 10, "1. AUDITORÍA DE FLUJOS MENSUALES (80% Data)", ln=True)
     pdf.set_font("Arial", '', 10)
-    pdf.multi_cell(0, 5, f"Inversión Total: S/. {data_dict['inv_total']:,.2f}\n"
-                         f"Flujo Neto Mensual: S/. {data_dict['flujo_neto']:,.2f}\n"
-                         f"Tiempo de Recuperación (Payback): {data_dict['payback']:.1f} años.")
-    pdf.set_text_color(100, 100, 100)
-    pdf.multi_cell(0, 5, "TIP: El flujo neto es el 'oxígeno' de su inversión. Siempre mantenga una reserva equivalente a 3 meses de cuota hipotecaria para contingencias.")
+    pdf.cell(0, 7, f"- Inversión Inicial Real: S/. {d['inv_total']:,.2f}", ln=True)
+    pdf.cell(0, 7, f"- Ingreso Bruto Proyectado: S/. {d['ing_bruto']:,.2f}", ln=True)
+    pdf.cell(0, 7, f"- Cuota Bancaria (Estimada): S/. {d['cuota']:,.2f}", ln=True)
+    pdf.cell(0, 7, f"- Utilidad Líquida (Flujo Neto): S/. {d['flujo_neto']:,.2f}", ln=True)
+    pdf.set_font("Arial", 'I', 9)
+    pdf.set_text_color(50, 50, 50)
+    pdf.multi_cell(0, 5, "TIP INGENIERÍA: Un flujo neto positivo es vital. Si el flujo es marginal, considere aumentar la cuota inicial para reducir el apalancamiento y mejorar la resiliencia del activo.")
     pdf.set_text_color(0, 0, 0)
-
-    # Sección 2: Plusvalía
     pdf.ln(5)
-    pdf.set_font("Arial", 'B', 12)
-    pdf.cell(200, 10, "2. PROYECCIÓN DE PATRIMONIO (PLUSVALÍA)", ln=True)
-    pdf.set_font("Arial", '', 10)
-    pdf.multi_cell(0, 5, f"Plusvalía estimada a 10 años: S/. {data_dict['plus_10']:,.2f}\n"
-                         f"Plusvalía estimada a 20 años: S/. {data_dict['plus_20']:,.2f}")
-    pdf.multi_cell(0, 5, "INFORMACIÓN COMPLEMENTARIA: La plusvalía en distritos consolidados de Lima (Miraflores/San Isidro) suele ser más estable, mientras que en distritos en crecimiento (Surquillo/Magdalena) el potencial de apreciación es mayor por m2.")
 
-    # Sección 3: Sensibilidad
-    pdf.ln(5)
+    # Bloque 2: Plusvalía y Patrimonio (Pestaña 2)
     pdf.set_font("Arial", 'B', 12)
-    pdf.cell(200, 10, "3. ANÁLISIS DE RESILIENCIA (ESCENARIOS)", ln=True)
+    pdf.cell(0, 10, "2. VALORIZACIÓN Y PATRIMONIO", ln=True)
     pdf.set_font("Arial", '', 10)
-    pdf.multi_cell(0, 5, f"Punto de Equilibrio: {data_dict['be_days']} noches/mes.\n"
-                         f"ROI Anual Estimado: {data_dict['roi']:.2f}%")
-    pdf.set_text_color(100, 100, 100)
-    pdf.multi_cell(0, 5, "TIP DE RIESGO: Si su ocupación baja del punto de equilibrio, el inmueble deja de ser 'autosustentable' y requiere inyección de capital propio para cubrir la deuda.")
+    pdf.cell(0, 7, f"- Plusvalía Acumulada (10 años): S/. {d['plus_10']:,.2f}", ln=True)
+    pdf.cell(0, 7, f"- Plusvalía Acumulada (20 años): S/. {d['plus_20']:,.2f}", ln=True)
+    pdf.multi_cell(0, 5, "INFO COMPLEMENTARIA: La plusvalía no es solo apreciación del mercado, es la construcción de 'Equity'. Al finalizar el préstamo, el 100% del valor del inmueble más la apreciación forman su patrimonio neto.")
+    pdf.ln(5)
+
+    # Bloque 3: Sensibilidad (Pestaña 3)
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(0, 10, "3. ESCENARIOS DE ESTRÉS OPERATIVO", ln=True)
+    pdf.set_font("Arial", '', 10)
+    pdf.cell(0, 7, f"- Punto de Equilibrio: {d['be_days']} noches/mes para cubrir costos.", ln=True)
+    pdf.cell(0, 7, f"- ROI Anual Proyectado: {d['roi']:.2f}% sobre capital invertido.", ln=True)
+    pdf.set_text_color(200, 0, 0)
+    pdf.multi_cell(0, 5, "TIP DE RIESGO: Monitoree su ADR (Tarifa Diaria). En meses de baja ocupación, es preferible bajar ligeramente el precio para asegurar el volumen de noches y no caer por debajo del punto de equilibrio.")
     pdf.set_text_color(0, 0, 0)
-
-    # Sección 4: Comparativa
     pdf.ln(5)
+
+    # Bloque 4: Comparativa (Pestaña 4)
     pdf.set_font("Arial", 'B', 12)
-    pdf.cell(200, 10, "4. COMPARATIVA: AIRBNB VS TRADICIONAL", ln=True)
+    pdf.cell(0, 10, "4. ANÁLISIS COMPARATIVO DE MODELOS", ln=True)
     pdf.set_font("Arial", '', 10)
-    pdf.multi_cell(0, 5, f"Utilidad Extra Anual (Airbnb): S/. {data_dict['ventaja']:,.2f}\n"
-                         f"Factor de Eficiencia: {data_dict['factor']:.1f}x")
-    pdf.multi_cell(0, 5, "CONCLUSIÓN TÉCNICA: El modelo de renta corta (Airbnb) maximiza el ROI pero incrementa el gasto operativo y el desgaste del mobiliario. El modelo tradicional es ideal para inversores que buscan 'pasividad' total.")
-    
+    pdf.cell(0, 7, f"- Diferencial Airbnb vs Tradicional: S/. {d['ventaja']:,.2f} adicionales/año.", ln=True)
+    pdf.cell(0, 7, f"- Factor de Eficiencia: {d['factor']:.1f}x más rentable.", ln=True)
+    pdf.set_font("Arial", 'B', 10)
+    pdf.multi_cell(0, 5, "ASESORÍA FINAL: El modelo Airbnb requiere una gestión activa o un Property Manager. Si busca ingresos 100% pasivos, el modelo tradicional sigue siendo la opción más estable a largo plazo.")
+
     return pdf.output(dest='S').encode('latin-1')
 
 if check_password():
-    # ESTILOS CSS (MANTENIENDO FORMATO WEB)
+    # --- ESTILOS CSS (RESTAURACIÓN V37) ---
     st.markdown("""
         <style>
         .main { background-color: #0e1117; }
@@ -100,7 +102,7 @@ if check_password():
         </style>
         """, unsafe_allow_html=True)
 
-    # --- 2. SIDEBAR ---
+    # --- SIDEBAR PARÁMETROS ---
     with st.sidebar:
         st.header("⚙️ Parámetros")
         val_depa = st.number_input("Precio Inmueble (S/.)", value=250000)
@@ -114,7 +116,7 @@ if check_password():
         st.write("---")
         renta_trad = st.number_input("Renta Tradicional (S/.)", value=1800)
 
-    # --- 3. LÓGICA FINANCIERA ---
+    # --- LÓGICA FINANCIERA ---
     inicial_banco = val_depa * 0.20
     inversion_total_real = inicial_banco + inv_amoblado
     prestamo = val_depa - inicial_banco
@@ -128,7 +130,7 @@ if check_password():
     breakeven_dias = (cuota + mantenimiento_mes) / (tarifa * 0.85 * 0.95)
     u_anual_trad = (renta_trad - cuota - (val_depa*0.015/12) - (renta_trad*0.05)) * 12
 
-    # --- 4. TABS (CONTENIDO WEB INTACTO) ---
+    # --- TABS (FORMATO WEB ORIGINAL) ---
     tab1, tab2, tab3, tab4 = st.tabs(["📊 Flujos", "📈 Plusvalía", "🛡️ Sensibilidad", "🔄 Airbnb vs Tradicional"])
 
     with tab1:
@@ -170,7 +172,7 @@ if check_password():
     with tab4:
         st.markdown('<div class="section-title">Comparativa de Modelos</div>', unsafe_allow_html=True)
         ventaja_anual = (flujo_neto_air*12) - u_anual_trad
-        eficiencia = (roi_anual_air/((u_anual_trad/inversion_total_real)*100))
+        eficiencia = (roi_anual_air/((u_anual_trad/inversion_total_real)*100)) if u_anual_trad != 0 else 0
         st.metric("Ventaja Airbnb (Anual)", f"S/. {ventaja_anual:,.0f}")
         
         fig_c = go.Figure([go.Bar(x=['Airbnb', 'Tradicional'], y=[flujo_neto_air*12, u_anual_trad], marker_color=['#3b82f6', '#10b981'], 
@@ -178,23 +180,23 @@ if check_password():
                                  textfont=dict(size=18, family="Arial Black"))])
         fig_c.update_layout(height=400, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
         st.plotly_chart(fig_c, use_container_width=True)
-        st.markdown('<div class="info-text"><b>Ficha Informativa Final:</b> Comparativa técnica de flujos post-deuda.</div>', unsafe_allow_html=True)
 
-    # --- 5. BOTONES FINALES Y EXPORTACIÓN ---
+    # --- BOTONES FINALES ---
     st.write("---")
     col_btn1, col_btn2 = st.columns(2)
     with col_btn1:
         if st.button("✅ Finalizar Auditoría"): st.balloons()
     
     with col_btn2:
-        # Preparación de datos para PDF
         report_data = {
             "inv_total": inversion_total_real,
+            "ing_bruto": ingreso_bruto_air,
+            "cuota": cuota,
             "flujo_neto": flujo_neto_air,
             "payback": año_rec if año_rec else 0,
             "plus_10": p_10,
             "plus_20": p_20,
-            "be_days": np.ceil(breakeven_dias),
+            "be_days": int(np.ceil(breakeven_dias)),
             "roi": roi_anual_air,
             "ventaja": ventaja_anual,
             "factor": eficiencia
@@ -204,6 +206,6 @@ if check_password():
         st.download_button(
             label="📥 Exportar Auditoría a PDF",
             data=pdf_bytes,
-            file_name=f"Auditoria_Inmobiliaria_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
+            file_name=f"Auditoria_{datetime.now().strftime('%Y%m%d')}.pdf",
             mime="application/pdf"
         )
